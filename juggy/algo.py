@@ -45,7 +45,9 @@ TEMPLATE = [
 ]
 
 
-def generate_lifts(protocol: list[tuple[float, int]], training_max: int, round: int = 5) -> list[tuple[float, int]]:
+def generate_base_lifts(
+    protocol: list[tuple[float, int]], training_max: int, round: int = 5
+) -> list[tuple[float, int]]:
     """Generate a list of lifts based on the protocol and training max."""
     if not isinstance(protocol, list):
         raise TypeError("Protocol must be a list")
@@ -57,3 +59,31 @@ def generate_lifts(protocol: list[tuple[float, int]], training_max: int, round: 
         weight = round_weight(training_max * ratio, round)
         lifts.append((weight, reps))
     return lifts
+
+
+def generate_warmups(
+    work_set: float, round=5, is_deadlift: bool = False, warmup_sets: int = 4
+) -> list[tuple[float, int]]:
+    """Generate a list of warmups based on the work set."""
+
+    first_set = 65 if is_deadlift else 45
+    inc = (work_set - first_set) / warmup_sets
+    warmups = [(first_set, 10)]
+    weight = first_set
+
+    for _, reps in zip(range(warmup_sets - 1), [5, 3, 2, 1, 1, 1, 1, 1]):
+        weight = round_weight(weight + inc, round)
+        warmups.append((weight, reps))
+    return warmups
+
+
+def generate_lifts(
+    protocol: list[tuple[float, int]], training_max: float, round: int = 5, is_deadlift: bool = False
+) -> list[tuple[float, int]]:
+    """Generate the main lifts of the day."""
+    base_lifts = generate_base_lifts(protocol, training_max, round)
+    work_set = base_lifts[0][0]
+    warmups = generate_warmups(work_set, round, is_deadlift)
+    warmups.append(None)
+
+    return warmups + base_lifts
