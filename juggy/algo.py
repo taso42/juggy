@@ -48,6 +48,11 @@ TEMPLATE = [
 
 def generate_lifts(protocol: list[tuple[float, int]], training_max: int) -> list[tuple[float, int]]:
     """Generate a list of lifts based on the protocol and training max."""
+    if not isinstance(protocol, list):
+        raise TypeError("Protocol must be a list")
+    if not isinstance(training_max, (int, float)):
+        raise TypeError("Training max must be a number")
+
     lifts = []
     for ratio, reps in protocol:
         weight = training_max * ratio
