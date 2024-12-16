@@ -1,5 +1,7 @@
 """Implementation of the Juggernaut method algorithm"""
+from juggy.util import round_weight
 
+DELOAD_WEEK = [(0.40, 5), (0.50, 5), (0.60, 5)]
 
 """
 Data structure:
@@ -11,12 +13,6 @@ Each Wave is a list of Weeks:
 Each Week is a list of (Ratio, Set) tuples:
 [(Ratio, Reps), (Ratio, Reps), ...]
 """
-
-from juggy.util import round_weight
-
-
-DELOAD_WEEK = [(0.40, 5), (0.50, 5), (0.60, 5)]
-
 TEMPLATE = [
     ## Wave 1 (10's)
     [

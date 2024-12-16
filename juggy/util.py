@@ -1,7 +1,6 @@
 """Utility functions for weight calculations."""
 
 import math
-from typing import Union
 
 
 def round_weight(weight: int | float, precision: int | float = 5) -> float:
