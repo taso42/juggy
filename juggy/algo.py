@@ -12,6 +12,9 @@ Each Week is a list of (Ratio, Set) tuples:
 [(Ratio, Reps), (Ratio, Reps), ...]
 """
 
+from juggy.util import round_weight
+
+
 DELOAD_WEEK = [(0.40, 5), (0.50, 5), (0.60, 5)]
 
 TEMPLATE = [
@@ -46,7 +49,7 @@ TEMPLATE = [
 ]
 
 
-def generate_lifts(protocol: list[tuple[float, int]], training_max: int) -> list[tuple[float, int]]:
+def generate_lifts(protocol: list[tuple[float, int]], training_max: int, round: int = 5) -> list[tuple[float, int]]:
     """Generate a list of lifts based on the protocol and training max."""
     if not isinstance(protocol, list):
         raise TypeError("Protocol must be a list")
@@ -55,6 +58,6 @@ def generate_lifts(protocol: list[tuple[float, int]], training_max: int) -> list
 
     lifts = []
     for ratio, reps in protocol:
-        weight = training_max * ratio
+        weight = round_weight(training_max * ratio, round)
         lifts.append((weight, reps))
     return lifts

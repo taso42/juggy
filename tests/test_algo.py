@@ -34,7 +34,7 @@ def test_template_structure():
 
 @pytest.mark.parametrize("training_max,expected", [
     (100, [(40.0, 5), (50.0, 5), (60.0, 5)]),  # Test with 100 lbs
-    (225, [(90.0, 5), (112.5, 5), (135.0, 5)]),  # Test with 225 lbs
+    (225, [(90.0, 5), (115.0, 5), (135.0, 5)]),  # Test with 225 lbs
 ])
 def test_generate_lifts(training_max, expected):
     """Test generate_lifts with different training maxes."""
