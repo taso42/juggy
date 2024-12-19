@@ -2,7 +2,7 @@
 
 import pytest
 
-from juggy.util import round_weight
+from juggy.util import kgs_to_lbs, lbs_to_kgs, round_weight
 
 
 @pytest.mark.parametrize(
@@ -39,3 +39,37 @@ def test_round_weight_invalid_input(weight, precision):
     """Test round_weight with invalid inputs."""
     with pytest.raises((TypeError, ValueError)):
         round_weight(weight, precision)
+
+
+@pytest.mark.parametrize(
+    "lbs,expected_kgs",
+    [
+        (45, 20.41),  # 45 lbs test case
+        (100, 45.36),
+        (200, 90.72),
+        (0, 0),  # Edge case
+    ],
+)
+def test_lbs_to_kgs(lbs, expected_kgs):
+    """Test converting pounds to kilograms."""
+    assert round(lbs_to_kgs(lbs), 2) == expected_kgs
+
+
+@pytest.mark.parametrize(
+    "kgs,expected_lbs",
+    [
+        (100, 220.46),  # 100 kg test case
+        (20, 44.09),  # Inverse of 45 lbs
+        (45, 99.21),
+        (0, 0),  # Edge case
+    ],
+)
+def test_kgs_to_lbs(kgs, expected_lbs):
+    """Test converting kilograms to pounds."""
+    assert round(kgs_to_lbs(kgs), 2) == expected_lbs
+
+
+def test_conversion_roundtrip():
+    """Test that converting from lbs to kgs and back returns the original value."""
+    original_lbs = 45
+    assert round(kgs_to_lbs(lbs_to_kgs(original_lbs)), 2) == original_lbs
