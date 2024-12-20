@@ -80,7 +80,15 @@ def generate_warmups(
 def generate_lifts(
     protocol: list[tuple[float, int]], training_max: float, round: int = 5, is_deadlift: bool = False
 ) -> list[tuple[float, int]]:
-    """Generate the main lifts of the day."""
+    """Generate the main lifts of the day.
+
+    This function generates a list of lifts based on the protocol and training max.
+    It also generates a list of warmups based on the work set.  Warmups and main lifts are partitioned by None.
+
+    Example:
+        >>> generate_lifts(TEMPLATE[0][2], 285, 5, False)
+        [(45, 10), (70, 5), (95, 3), (120, 2), None, (145, 5), (175, 3), (200, 1), (215, 10)]
+    """
     base_lifts = generate_base_lifts(protocol, training_max, round)
     work_set = base_lifts[0][0]
     warmups = generate_warmups(work_set, round, is_deadlift)

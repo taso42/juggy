@@ -1,17 +1,12 @@
 """Main application module."""
-import os
+import juggy.algo as a
 
-import dotenv
-
-SQUAT_TM = 285
 BENCH_TM = 220
+SQUAT_TM = 285
 OHP_TM = 130
 DEADLIFT_TM = 430
 
-print("Hello, world!")
-for wave in range(4):
-    print("wave", wave)
-
-dotenv.load_dotenv()
-
-print(os.getenv("HEVY_API_KEY"))
+squats = a.generate_lifts(a.TEMPLATE[0][2], SQUAT_TM, 5, False)
+bench = a.generate_lifts(a.TEMPLATE[0][2], BENCH_TM, 5, False)
+deads = a.generate_lifts(a.TEMPLATE[0][2], DEADLIFT_TM, 5, True)
+ohp = a.generate_lifts(a.TEMPLATE[0][2], OHP_TM, 5, False)
