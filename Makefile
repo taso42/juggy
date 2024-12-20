@@ -8,16 +8,20 @@ test: build/venv
 
 # Run tests with coverage report
 coverage: build/venv
-	poetry run pytest --cov=juggy --cov-report=term-missing
+	. ./build/venv/bin/activate && \
+		poetry run pytest --cov=juggy --cov-report=term-missing
 
-format:
-	poetry run ruff format .
+format: build/venv
+	. ./build/venv/bin/activate && \
+		poetry run ruff format .
 
-fix:
-	poetry run ruff check . --fix
+fix: build/venv
+	. ./build/venv/bin/activate && \
+		poetry run ruff check . --fix
 
-typecheck:
-	poetry run mypy .
+typecheck: build/venv
+	. ./build/venv/bin/activate && \
+		poetry run mypy .
 
 # Clean up Python cache files and coverage data
 clean:
@@ -35,15 +39,3 @@ build/venv:
 	python -m venv build/venv
 	. build/venv/bin/activate && poetry install
 
-# Help target
-help:
-	@echo "Available targets:"
-	@echo "  test       - Run tests, linting, and type checking"
-	@echo "  test-v     - Run tests with verbose output"
-	@echo "  test-vv    - Run tests with very verbose output"
-	@echo "  coverage   - Run tests with coverage report"
-	@echo "  format     - Format code with ruff"
-	@echo "  fix        - Auto-fix linting issues with ruff"
-	@echo "  typecheck  - Run mypy type checker"
-	@echo "  clean      - Clean up Python cache files and build artifacts"
-	@echo "  help       - Show this help message"

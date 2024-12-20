@@ -1,3 +1,5 @@
+from typing import cast
+
 import requests
 from loguru import logger
 
@@ -7,7 +9,7 @@ BASE_URL = "https://api.hevyapp.com/"
 PAGE_SIZE = 10
 
 
-def raise_for_status(response):
+def raise_for_status(response: requests.Response) -> None:
     if str(response.status_code)[0] != "2":
         raise RuntimeError(f"Request failed with status code {response.status_code}: {response.text}")
 
@@ -28,7 +30,7 @@ def get_folders(api_key: str) -> list[dict]:
         )
         # TODO: handle pagination
         logger.info(f"Page {page} of {page_count}")
-        return routine_folders
+        return cast(list[dict], routine_folders)
     else:
         return []
 
@@ -42,7 +44,7 @@ def create_folder(api_key: str, title: str) -> dict:
     response = requests.post(url, headers=headers, json=data)
     raise_for_status(response)
     logger.debug(f"Got response: {response}")
-    return response.json()
+    return cast(dict, response.json())
 
 
 def get_routines(api_key: str) -> list[dict]:
@@ -60,15 +62,13 @@ def get_routines(api_key: str) -> list[dict]:
     )
     # TODO: handle pagination
     logger.info(f"Page {page} of {page_count}")
-    return routines
+    return cast(list[dict], routines)
 
 
 def create_routine(api_key: str, title: str, folder_id: int, exercises: list[dict]) -> dict:
     """Create a routine in the Hevy API."""
     url = f"{BASE_URL}v1/routines"
     headers = {"api-key": api_key}
-    data = {"title": title}
-
     data = {
         "routine": {
             "title": title,
@@ -80,10 +80,10 @@ def create_routine(api_key: str, title: str, folder_id: int, exercises: list[dic
     logger.info(f"Creating routine {title} in folder {folder_id}")
     response = requests.post(url, headers=headers, json=data)
     raise_for_status(response)
-    return response.json()
+    return cast(dict, response.json())
 
 
-def bootstrap_routines(api_key: str, squats: dict, bench: dict, deads: dict, ohp: dict):
+def bootstrap_routines(api_key: str, squats: list[dict], bench: list[dict], deads: list[dict], ohp: list[dict]) -> None:
     """Bootstrap the routines in the Hevy API.
 
     This will ensure we have 4 routines in a folder named "Juggy":
@@ -95,6 +95,7 @@ def bootstrap_routines(api_key: str, squats: dict, bench: dict, deads: dict, ohp
     The routines and folder will be created if they don't exist.
     """
     folders = get_folders(api_key)
+
     for folder in folders:
         if folder["title"] == "Juggy":
             folder_id = folder["id"]
@@ -116,12 +117,12 @@ def bootstrap_routines(api_key: str, squats: dict, bench: dict, deads: dict, ohp
     create_routine(api_key, "OHP Day", folder_id, ohp)
 
 
-def lifts_to_hevy_sets(lifts: list[tuple[float, int]]) -> list[dict]:
+def lifts_to_hevy_sets(lifts: list[tuple[float | int, int] | None]) -> list[dict]:
     """Convert a list of lifts to a list of sets for the Hevy API."""
     exercises = []
     type = "warmup"
     for lift in lifts:
-        if not lift:
+        if lift is None:
             type = "normal"
             continue
         weight_lbs, reps = lift

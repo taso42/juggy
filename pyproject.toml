@@ -6,7 +6,7 @@ authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.12"
 python-dotenv = "^1.0.0"
 requests = "^2.32.3"
 loguru = "^0.7.3"
@@ -20,7 +20,7 @@ types-requests = "^2.31.0.20240106"
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
+target-version = "py312"
 
 # Enable Pyflakes (`F`), pycodestyle (`E`), isort (`I`), and more
 select = ["E", "F", "I", "N", "W", "B", "COM", "C4", "UP", "RUF"]
@@ -52,7 +52,7 @@ exclude = [
 ]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

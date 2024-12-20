@@ -2,6 +2,7 @@
 from juggy.util import round_weight
 
 DELOAD_WEEK = [(0.40, 5), (0.50, 5), (0.60, 5)]
+WARMUP_REPS = [5, 3, 2, 1, 1, 1, 1, 1]
 
 """
 Data structure:
@@ -46,14 +47,9 @@ TEMPLATE = [
 
 
 def generate_base_lifts(
-    protocol: list[tuple[float, int]], training_max: int, round: int = 5
+    protocol: list[tuple[float, int]], training_max: float, round: int = 5
 ) -> list[tuple[float, int]]:
     """Generate a list of lifts based on the protocol and training max."""
-    if not isinstance(protocol, list):
-        raise TypeError("Protocol must be a list")
-    if not isinstance(training_max, (int, float)):
-        raise TypeError("Training max must be a number")
-
     lifts = []
     for ratio, reps in protocol:
         weight = round_weight(training_max * ratio, round)
@@ -62,24 +58,26 @@ def generate_base_lifts(
 
 
 def generate_warmups(
-    work_set: float, round=5, is_deadlift: bool = False, warmup_sets: int = 4
-) -> list[tuple[float, int]]:
+    work_set: float, round: int = 5, is_deadlift: bool = False, warmup_sets: int = 4
+) -> list[tuple[float, int] | None]:
     """Generate a list of warmups based on the work set."""
 
     first_set = 65 if is_deadlift else 45
     inc = (work_set - first_set) / warmup_sets
-    warmups = [(first_set, 10)]
-    weight = first_set
+    warmups: list[tuple[float, int] | None] = [(first_set, 10)]
+    weight: float = first_set
 
-    for _, reps in zip(range(warmup_sets - 1), [5, 3, 2, 1, 1, 1, 1, 1]):
+    for i in range(warmup_sets - 1):
+        if i >= len(WARMUP_REPS):
+            break
         weight = round_weight(weight + inc, round)
-        warmups.append((weight, reps))
+        warmups.append((weight, WARMUP_REPS[i]))
     return warmups
 
 
 def generate_lifts(
     protocol: list[tuple[float, int]], training_max: float, round: int = 5, is_deadlift: bool = False
-) -> list[tuple[float, int]]:
+) -> list[tuple[float, int] | None]:
     """Generate the main lifts of the day.
 
     This function generates a list of lifts based on the protocol and training max.
@@ -92,6 +90,7 @@ def generate_lifts(
     base_lifts = generate_base_lifts(protocol, training_max, round)
     work_set = base_lifts[0][0]
     warmups = generate_warmups(work_set, round, is_deadlift)
-    warmups.append(None)
-
-    return warmups + base_lifts
+    result: list[tuple[float, int] | None] = list(warmups)
+    result.append(None)
+    result.extend(base_lifts)
+    return result

@@ -16,12 +16,12 @@ from juggy.util import kgs_to_lbs, lbs_to_kgs, round_weight
         (67.8, 1, 68.0),  # Round to nearest 1
     ],
 )
-def test_round_weight(weight, precision, expected):
+def test_round_weight(weight: float, precision: float, expected: float) -> None:
     """Test rounding weights to specified precision."""
     assert round_weight(weight, precision) == expected
 
 
-def test_round_weight_defaults():
+def test_round_weight_defaults() -> None:
     """Test round_weight with default precision."""
     assert round_weight(102.3) == 105.0  # Default precision should be 5
 
@@ -35,7 +35,7 @@ def test_round_weight_defaults():
         (100.0, -1),
     ],
 )
-def test_round_weight_invalid_input(weight, precision):
+def test_round_weight_invalid_input(weight: float, precision: float) -> None:
     """Test round_weight with invalid inputs."""
     with pytest.raises((TypeError, ValueError)):
         round_weight(weight, precision)
@@ -50,7 +50,7 @@ def test_round_weight_invalid_input(weight, precision):
         (0, 0),  # Edge case
     ],
 )
-def test_lbs_to_kgs(lbs, expected_kgs):
+def test_lbs_to_kgs(lbs: float, expected_kgs: float) -> None:
     """Test converting pounds to kilograms."""
     assert round(lbs_to_kgs(lbs), 2) == expected_kgs
 
@@ -64,12 +64,12 @@ def test_lbs_to_kgs(lbs, expected_kgs):
         (0, 0),  # Edge case
     ],
 )
-def test_kgs_to_lbs(kgs, expected_lbs):
+def test_kgs_to_lbs(kgs: float, expected_lbs: float) -> None:
     """Test converting kilograms to pounds."""
     assert round(kgs_to_lbs(kgs), 2) == expected_lbs
 
 
-def test_conversion_roundtrip():
+def test_conversion_roundtrip() -> None:
     """Test that converting from lbs to kgs and back returns the original value."""
     original_lbs = 45
     assert round(kgs_to_lbs(lbs_to_kgs(original_lbs)), 2) == original_lbs

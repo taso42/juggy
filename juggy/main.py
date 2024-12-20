@@ -18,7 +18,7 @@ OHP_TM = 130
 DEADLIFT_TM = 430
 
 dotenv.load_dotenv()
-api_key = os.getenv("HEVY_API_KEY")
+api_key = os.getenv("HEVY_API_KEY", "broken")
 
 squats = a.generate_lifts(a.TEMPLATE[0][2], SQUAT_TM, 5, False)
 bench = a.generate_lifts(a.TEMPLATE[0][2], BENCH_TM, 5, False)
