@@ -14,6 +14,9 @@ loguru = "^0.7.3"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 ruff = "^0.1.8"
+pytest-cov = "^4.1.0"
+mypy = "^1.8.0"
+types-requests = "^2.31.0.20240106"
 
 [tool.ruff]
 line-length = 120
@@ -47,6 +50,20 @@ exclude = [
     "node_modules",
     "venv",
 ]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
 
 [build-system]
 requires = ["poetry-core"]
