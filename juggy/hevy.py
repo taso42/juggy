@@ -95,8 +95,9 @@ def create_or_update_routine(
     return cast(dict, response.json())
 
 
-def bootstrap_routines(api_key: str, squats: list[dict], bench: list[dict], deads: list[dict], ohp: list[dict]) -> None:
-    """Bootstrap the routines in the Hevy API.
+def setup_routines(api_key: str, squats: list[dict], bench: list[dict], deads: list[dict], ohp: list[dict]) -> None:
+    """
+    Set up the routines in the Hevy API.
 
     This will ensure we have 4 routines in a folder named "Juggy":
     - Squat Day
@@ -104,7 +105,7 @@ def bootstrap_routines(api_key: str, squats: list[dict], bench: list[dict], dead
     - Deadlift Day
     - OHP Day
 
-    The routines and folder will be created if they don't exist.
+    The routines and folder will be created if they don't exist, or updated if they do.
     """
     folders = get_folders(api_key)
 
