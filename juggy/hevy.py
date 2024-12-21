@@ -18,6 +18,7 @@ class HevyExercise(TypedDict):
     """A single exercise in a Hevy routine."""
 
     exercise_template_id: str
+    notes: str
     sets: list[HevySet]
 
 
@@ -33,6 +34,7 @@ class HevyRoutine(TypedDict):
 
     id: int
     title: str
+    notes: str
     folder_id: int
     exercises: list[HevyExercise]
 
@@ -98,7 +100,12 @@ def get_routines(api_key: str) -> list[HevyRoutine]:
 
 
 def create_or_update_routine(
-    api_key: str, routines: list[HevyRoutine], title: str, folder_id: int, exercises: list[HevyExercise]
+    api_key: str,
+    existing_routines: list[HevyRoutine],
+    title: str,
+    folder_id: int,
+    exercises: list[HevyExercise],
+    notes: str,
 ) -> HevyRoutine:
     """Create or update a routine in the Hevy API."""
     url = f"{BASE_URL}v1/routines"
@@ -109,10 +116,11 @@ def create_or_update_routine(
             "title": title,
             "folder_id": folder_id,
             "exercises": exercises,
+#            "notes": notes,
         }
     }
 
-    existing_routine = next((r for r in routines if r["title"] == title), None)
+    existing_routine = next((r for r in existing_routines if r["title"] == title), None)
     if existing_routine:
         routine_id = existing_routine["id"]
         del data["routine"]["folder_id"]
@@ -129,6 +137,7 @@ def create_or_update_routine(
 
 def setup_routines(
     api_key: str,
+    notes: str,
     squats: list[HevyExercise],
     bench: list[HevyExercise],
     deads: list[HevyExercise],
@@ -161,10 +170,10 @@ def setup_routines(
 
     routines = get_routines(api_key)
 
-    create_or_update_routine(api_key, routines, "Squat Day", folder_id, squats)
-    create_or_update_routine(api_key, routines, "Bench Day", folder_id, bench)
-    create_or_update_routine(api_key, routines, "Deadlift Day", folder_id, deads)
-    create_or_update_routine(api_key, routines, "OHP Day", folder_id, ohp)
+    create_or_update_routine(api_key, routines, "Squat Day", folder_id, squats, notes)
+    create_or_update_routine(api_key, routines, "Bench Day", folder_id, bench, notes)
+    create_or_update_routine(api_key, routines, "Deadlift Day", folder_id, deads, notes)
+    create_or_update_routine(api_key, routines, "OHP Day", folder_id, ohp, notes)
 
 
 def lifts_to_hevy_sets(lifts: list[tuple[float | int, int] | None]) -> list[HevySet]:
@@ -178,4 +187,4 @@ def lifts_to_hevy_sets(lifts: list[tuple[float | int, int] | None]) -> list[Hevy
         weight_lbs, reps = lift
         weight_kg = u.lbs_to_kgs(weight_lbs)
         exercises.append({"type": type, "weight_kg": weight_kg, "reps": reps})
-    return exercises
+    return cast(list[HevySet], exercises)
