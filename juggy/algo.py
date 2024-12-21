@@ -1,4 +1,5 @@
 """Implementation of the Juggernaut method algorithm"""
+
 from juggy.util import round_weight
 
 DELOAD_WEEK = [(0.40, 5), (0.50, 5), (0.60, 5)]
@@ -94,3 +95,25 @@ def generate_lifts(
     result.append(None)
     result.extend(base_lifts)
     return result
+
+
+def compute_one_rep_max(weight: float, reps: int) -> float:
+    """Compute the theoratical one rep max, a given weight and reps achieved."""
+    return weight * reps * 0.0333 + weight
+
+
+def compute_new_training_max(
+    old_training_max: float,
+    weight: float,
+    expected_reps: int,
+    actual_reps: int,
+    increment: float,
+    one_rep_max_threshold: float = 0.9,
+) -> float:
+    """Compute the new training max based on how much the expected reps were outperformed."""
+
+    tm = min(10, (actual_reps - expected_reps)) * increment + old_training_max
+    orm = compute_one_rep_max(weight, actual_reps)
+    capped_tm = orm * one_rep_max_threshold
+    new_tm = min(tm, capped_tm)
+    return new_tm

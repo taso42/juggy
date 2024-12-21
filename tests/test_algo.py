@@ -2,7 +2,15 @@
 
 import pytest
 
-from juggy.algo import DELOAD_WEEK, TEMPLATE, generate_base_lifts, generate_lifts, generate_warmups
+from juggy.algo import (
+    DELOAD_WEEK,
+    TEMPLATE,
+    compute_new_training_max,
+    compute_one_rep_max,
+    generate_base_lifts,
+    generate_lifts,
+    generate_warmups,
+)
 
 
 def test_deload_week_structure() -> None:
@@ -76,3 +84,51 @@ def test_generate_lifts() -> None:
     protocol = TEMPLATE[0][2]
     result = generate_lifts(protocol, 285, 5, False)
     assert result == [(45, 10), (70, 5), (95, 3), (120, 2), None, (145, 5), (175, 3), (200, 1), (215, 10)]
+
+
+@pytest.mark.parametrize(
+    "weight,reps,expected",
+    [
+        (130, 10, 173),
+        (165, 16, 253),
+        (45, 16, 69),
+    ],
+)
+def test_compute_one_rep_max(weight: float, reps: int, expected: float) -> None:
+    """Test compute_one_rep_max."""
+    assert round(compute_one_rep_max(weight, reps)) == expected
+
+
+@pytest.mark.parametrize(
+    "old_training_max,weight,expected_reps,actual_reps,increment,one_rep_max_threshold,expected",
+    [
+        (220, 165, 10, 14, 2.5, 0.9, 218),
+        (285, 215, 10, 13, 1.25, 0.9, 277),
+        (430, 325, 10, 14, 2.5, 0.95, 440),
+        (430, 325, 10, 20, 2.5, 0.95, 455),
+        (430, 325, 10, 21, 2.5, 0.95, 455),
+    ],
+)
+def test_compute_new_training_max(
+    old_training_max: float,
+    weight: float,
+    expected_reps: int,
+    actual_reps: int,
+    increment: float,
+    one_rep_max_threshold: float,
+    expected: float,
+) -> None:
+    """Test compute_new_training_max."""
+    assert (
+        round(
+            compute_new_training_max(
+                old_training_max,
+                weight,
+                expected_reps,
+                actual_reps,
+                increment,
+                one_rep_max_threshold,
+            )
+        )
+        == expected
+    )
