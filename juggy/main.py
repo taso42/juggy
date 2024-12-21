@@ -38,12 +38,15 @@ def setup_week(api_key: str, wave: int, week: int) -> None:
     deads = a.generate_lifts(protocol, DEADLIFT_TM, 5, True)
     ohp = a.generate_lifts(protocol, OHP_TM, 5, False)
 
+    notes = f"Wave {wave}, Week {week}"
+
     h.setup_routines(
         api_key,
-        [{"exercise_template_id": SQUAT_EXERCISE_ID, "sets": h.lifts_to_hevy_sets(squats)}],
-        [{"exercise_template_id": BENCH_EXERCISE_ID, "sets": h.lifts_to_hevy_sets(bench)}],
-        [{"exercise_template_id": DEADLIFT_EXERCISE_ID, "sets": h.lifts_to_hevy_sets(deads)}],
-        [{"exercise_template_id": OHP_EXERCISE_ID, "sets": h.lifts_to_hevy_sets(ohp)}],
+        f"Wave {wave}, Week {week}",
+        [{"exercise_template_id": SQUAT_EXERCISE_ID, "sets": h.lifts_to_hevy_sets(squats), "notes": notes}],
+        [{"exercise_template_id": BENCH_EXERCISE_ID, "sets": h.lifts_to_hevy_sets(bench), "notes": notes}],
+        [{"exercise_template_id": DEADLIFT_EXERCISE_ID, "sets": h.lifts_to_hevy_sets(deads), "notes": notes}],
+        [{"exercise_template_id": OHP_EXERCISE_ID, "sets": h.lifts_to_hevy_sets(ohp), "notes": notes}],
     )
 
 
