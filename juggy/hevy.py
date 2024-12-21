@@ -65,9 +65,12 @@ def get_routines(api_key: str) -> list[dict]:
     return cast(list[dict], routines)
 
 
-def create_routine(api_key: str, title: str, folder_id: int, exercises: list[dict]) -> dict:
-    """Create a routine in the Hevy API."""
+def create_or_update_routine(
+    api_key: str, routines: list[dict], title: str, folder_id: int, exercises: list[dict]
+) -> dict:
+    """Create or update a routine in the Hevy API."""
     url = f"{BASE_URL}v1/routines"
+
     headers = {"api-key": api_key}
     data = {
         "routine": {
@@ -77,9 +80,18 @@ def create_routine(api_key: str, title: str, folder_id: int, exercises: list[dic
         }
     }
 
-    logger.info(f"Creating routine {title} in folder {folder_id}")
-    response = requests.post(url, headers=headers, json=data)
-    raise_for_status(response)
+    existing_routine = next((r for r in routines if r["title"] == title), None)
+    if existing_routine:
+        routine_id = existing_routine["id"]
+        del data["routine"]["folder_id"]
+        logger.info(f"Updating routine {title} with id {routine_id}")
+        url = f"{url}/{routine_id}"
+        response = requests.put(url, headers=headers, json=data)
+        raise_for_status(response)
+    else:
+        logger.info(f"Creating routine {title} in folder {folder_id}")
+        response = requests.post(url, headers=headers, json=data)
+        raise_for_status(response)
     return cast(dict, response.json())
 
 
@@ -108,13 +120,12 @@ def bootstrap_routines(api_key: str, squats: list[dict], bench: list[dict], dead
         folder_id = response["routine_folder"]["id"]
         logger.info(f"Created Juggy folder with id {folder_id}")
 
-    # TODO: lookup and replace each routine
-    # routines = get_routines(api_key)
+    routines = get_routines(api_key)
 
-    create_routine(api_key, "Squat Day", folder_id, squats)
-    create_routine(api_key, "Bench Day", folder_id, bench)
-    create_routine(api_key, "Deadlift Day", folder_id, deads)
-    create_routine(api_key, "OHP Day", folder_id, ohp)
+    create_or_update_routine(api_key, routines, "Squat Day", folder_id, squats)
+    create_or_update_routine(api_key, routines, "Bench Day", folder_id, bench)
+    create_or_update_routine(api_key, routines, "Deadlift Day", folder_id, deads)
+    create_or_update_routine(api_key, routines, "OHP Day", folder_id, ohp)
 
 
 def lifts_to_hevy_sets(lifts: list[tuple[float | int, int] | None]) -> list[dict]:
