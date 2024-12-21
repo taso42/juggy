@@ -1,20 +1,23 @@
 # Juggy
 
-A simple command-line application managed with Poetry.
+A simple command-line application that generates routines for the Juggernaut method in the [Hevy app](https://hevy.com/), using the Hevy API.
 
-## Setup
+## Pre-requisites
 
-1. Make sure you have Poetry installed:
+- You need to have a Hevy account and API key.  This requires a Pro subscription.
+- A Mac or *nix environment
+- Python 3.12, Poetry, Make
+
+## Setup and using
+
+1. Setup venv and install dependencies:
 ```bash
-curl -sSL https://install.python-poetry.org | python3 -
+python -m venv venv
+. ./venv/bin/activate
+poetry install
 ```
 
-2. Install dependencies:
-```bash
-make build/venv
-```
-
-3. Run the application:
+2. Run the application:
 ```bash
 python -m juggy.main --wave <wave> --week <week>
 ```
