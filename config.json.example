@@ -1,0 +1,11 @@
+{
+    "squat_tm": 285,
+    "bench_tm": 220,
+    "deadlift_tm": 430,
+    "ohp_tm": 130,
+
+    "squat_exercise_id": "D04AC939",
+    "bench_exercise_id": "79D0BB3A",
+    "deadlift_exercise_id": "C6272009",
+    "ohp_exercise_id": "7B8D84E8"
+}
