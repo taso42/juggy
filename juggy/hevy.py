@@ -116,7 +116,7 @@ def create_or_update_routine(
             "title": title,
             "folder_id": folder_id,
             "exercises": exercises,
-#            "notes": notes,
+            # "notes": notes,
         }
     }
 

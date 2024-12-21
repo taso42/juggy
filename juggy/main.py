@@ -5,21 +5,11 @@ import os
 import dotenv
 
 import juggy.algo as a
+import juggy.config as c
 import juggy.hevy as h
-from juggy.constants import (
-    BENCH_EXERCISE_ID,
-    DEADLIFT_EXERCISE_ID,
-    OHP_EXERCISE_ID,
-    SQUAT_EXERCISE_ID,
-)
-
-BENCH_TM = 220
-SQUAT_TM = 285
-OHP_TM = 130
-DEADLIFT_TM = 430
 
 
-def setup_week(api_key: str, wave: int, week: int) -> None:
+def setup_week(api_key: str, config: c.Config, wave: int, week: int) -> None:
     """Setup a week in the Hevy API.
 
     Args:
@@ -33,20 +23,20 @@ def setup_week(api_key: str, wave: int, week: int) -> None:
         raise ValueError(f"Invalid week number: {week}")
 
     protocol = a.TEMPLATE[wave - 1][week - 1]
-    squats = a.generate_lifts(protocol, SQUAT_TM, 5, False)
-    bench = a.generate_lifts(protocol, BENCH_TM, 5, False)
-    deads = a.generate_lifts(protocol, DEADLIFT_TM, 5, True)
-    ohp = a.generate_lifts(protocol, OHP_TM, 5, False)
+    squats = a.generate_lifts(protocol, config["squat_tm"], 5, False)
+    bench = a.generate_lifts(protocol, config["bench_tm"], 5, False)
+    deads = a.generate_lifts(protocol, config["deadlift_tm"], 5, True)
+    ohp = a.generate_lifts(protocol, config["ohp_tm"], 5, False)
 
     notes = f"Wave {wave}, Week {week}"
 
     h.setup_routines(
         api_key,
         f"Wave {wave}, Week {week}",
-        [{"exercise_template_id": SQUAT_EXERCISE_ID, "sets": h.lifts_to_hevy_sets(squats), "notes": notes}],
-        [{"exercise_template_id": BENCH_EXERCISE_ID, "sets": h.lifts_to_hevy_sets(bench), "notes": notes}],
-        [{"exercise_template_id": DEADLIFT_EXERCISE_ID, "sets": h.lifts_to_hevy_sets(deads), "notes": notes}],
-        [{"exercise_template_id": OHP_EXERCISE_ID, "sets": h.lifts_to_hevy_sets(ohp), "notes": notes}],
+        [{"exercise_template_id": config["squat_exercise_id"], "sets": h.lifts_to_hevy_sets(squats), "notes": notes}],
+        [{"exercise_template_id": config["bench_exercise_id"], "sets": h.lifts_to_hevy_sets(bench), "notes": notes}],
+        [{"exercise_template_id": config["deadlift_exercise_id"], "sets": h.lifts_to_hevy_sets(deads), "notes": notes}],
+        [{"exercise_template_id": config["ohp_exercise_id"], "sets": h.lifts_to_hevy_sets(ohp), "notes": notes}],
     )
 
 
@@ -54,11 +44,13 @@ def main() -> None:
     dotenv.load_dotenv()
     api_key = os.getenv("HEVY_API_KEY", "undefined")
 
+    config = c.load_config()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--wave", type=int, required=True, help="The wave of the program (1-4)")
     parser.add_argument("--week", type=int, required=True, help="The week number of the program (1-4)")
     args = parser.parse_args()
-    setup_week(api_key, args.wave, args.week)
+    setup_week(api_key, config, args.wave, args.week)
 
 
 if __name__ == "__main__":
