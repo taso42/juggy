@@ -52,15 +52,10 @@ def main() -> None:
     api_key = os.getenv("HEVY_API_KEY", "undefined")
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--wave", type=int, required=True, help="The wave of the program (1-4)"
-    )
-    parser.add_argument(
-        "--week", type=int, required=True, help="The week number of the program (1-4)"
-    )
+    parser.add_argument("--wave", type=int, required=True, help="The wave of the program (1-4)")
+    parser.add_argument("--week", type=int, required=True, help="The week number of the program (1-4)")
     args = parser.parse_args()
     setup_week(api_key, args.wave, args.week)
-
 
 
 if __name__ == "__main__":

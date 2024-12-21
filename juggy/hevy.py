@@ -1,9 +1,41 @@
-from typing import cast
+from typing import Literal, TypedDict, cast
 
 import requests
 from loguru import logger
 
 from juggy import util as u
+
+
+class HevySet(TypedDict):
+    """A single set in a Hevy exercise."""
+
+    type: Literal["warmup", "normal"]
+    weight_kg: float
+    reps: int
+
+
+class HevyExercise(TypedDict):
+    """A single exercise in a Hevy routine."""
+
+    exercise_template_id: str
+    sets: list[HevySet]
+
+
+class HevyRoutineFolder(TypedDict):
+    """A folder containing Hevy routines."""
+
+    id: int
+    title: str
+
+
+class HevyRoutine(TypedDict):
+    """A Hevy routine."""
+
+    id: int
+    title: str
+    folder_id: int
+    exercises: list[HevyExercise]
+
 
 BASE_URL = "https://api.hevyapp.com/"
 PAGE_SIZE = 10
@@ -14,7 +46,7 @@ def raise_for_status(response: requests.Response) -> None:
         raise RuntimeError(f"Request failed with status code {response.status_code}: {response.text}")
 
 
-def get_folders(api_key: str) -> list[dict]:
+def get_folders(api_key: str) -> list[HevyRoutineFolder]:
     """Get all the folders from the Hevy API."""
     url = f"{BASE_URL}v1/routine_folders"
     params = {"page": 1, "pageSize": PAGE_SIZE}
@@ -30,12 +62,12 @@ def get_folders(api_key: str) -> list[dict]:
         )
         # TODO: handle pagination
         logger.info(f"Page {page} of {page_count}")
-        return cast(list[dict], routine_folders)
+        return cast(list[HevyRoutineFolder], routine_folders)
     else:
         return []
 
 
-def create_folder(api_key: str, title: str) -> dict:
+def create_folder(api_key: str, title: str) -> HevyRoutineFolder:
     """Create a folder in the Hevy API."""
     url = f"{BASE_URL}v1/routine_folders"
     headers = {"api-key": api_key}
@@ -44,10 +76,10 @@ def create_folder(api_key: str, title: str) -> dict:
     response = requests.post(url, headers=headers, json=data)
     raise_for_status(response)
     logger.debug(f"Got response: {response}")
-    return cast(dict, response.json())
+    return cast(HevyRoutineFolder, response.json())
 
 
-def get_routines(api_key: str) -> list[dict]:
+def get_routines(api_key: str) -> list[HevyRoutine]:
     """Get all the routines from the Hevy API."""
     url = f"{BASE_URL}v1/routines"
     params = {"page": 1, "pageSize": PAGE_SIZE}
@@ -62,12 +94,12 @@ def get_routines(api_key: str) -> list[dict]:
     )
     # TODO: handle pagination
     logger.info(f"Page {page} of {page_count}")
-    return cast(list[dict], routines)
+    return cast(list[HevyRoutine], routines)
 
 
 def create_or_update_routine(
-    api_key: str, routines: list[dict], title: str, folder_id: int, exercises: list[dict]
-) -> dict:
+    api_key: str, routines: list[HevyRoutine], title: str, folder_id: int, exercises: list[HevyExercise]
+) -> HevyRoutine:
     """Create or update a routine in the Hevy API."""
     url = f"{BASE_URL}v1/routines"
 
@@ -92,10 +124,16 @@ def create_or_update_routine(
         logger.info(f"Creating routine {title} in folder {folder_id}")
         response = requests.post(url, headers=headers, json=data)
         raise_for_status(response)
-    return cast(dict, response.json())
+    return cast(HevyRoutine, response.json())
 
 
-def setup_routines(api_key: str, squats: list[dict], bench: list[dict], deads: list[dict], ohp: list[dict]) -> None:
+def setup_routines(
+    api_key: str,
+    squats: list[HevyExercise],
+    bench: list[HevyExercise],
+    deads: list[HevyExercise],
+    ohp: list[HevyExercise],
+) -> None:
     """
     Set up the routines in the Hevy API.
 
@@ -118,7 +156,7 @@ def setup_routines(api_key: str, squats: list[dict], bench: list[dict], deads: l
         logger.info("Juggy folder does not exist, creating it")
         response = create_folder(api_key, "Juggy")
         logger.debug(f"Got response: {response}")
-        folder_id = response["routine_folder"]["id"]
+        folder_id = response["id"]
         logger.info(f"Created Juggy folder with id {folder_id}")
 
     routines = get_routines(api_key)
@@ -129,7 +167,7 @@ def setup_routines(api_key: str, squats: list[dict], bench: list[dict], deads: l
     create_or_update_routine(api_key, routines, "OHP Day", folder_id, ohp)
 
 
-def lifts_to_hevy_sets(lifts: list[tuple[float | int, int] | None]) -> list[dict]:
+def lifts_to_hevy_sets(lifts: list[tuple[float | int, int] | None]) -> list[HevySet]:
     """Convert a list of lifts to a list of sets for the Hevy API."""
     exercises = []
     type = "warmup"
