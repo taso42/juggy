@@ -32,6 +32,7 @@ def setup_week(api_key: str, config: c.Config, wave: int, week: int) -> None:
 
     h.setup_routines(
         api_key,
+        config,
         f"Wave {wave}, Week {week}",
         [{"exercise_template_id": config["squat_exercise_id"], "sets": h.lifts_to_hevy_sets(squats), "notes": notes}],
         [{"exercise_template_id": config["bench_exercise_id"], "sets": h.lifts_to_hevy_sets(bench), "notes": notes}],

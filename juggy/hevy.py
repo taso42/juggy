@@ -1,9 +1,10 @@
-from typing import Literal, TypedDict, cast
+from typing import Literal, NotRequired, TypedDict, cast
 
 import requests
 from loguru import logger
 
 from juggy import util as u
+from juggy.config import Config
 
 
 class HevySet(TypedDict):
@@ -12,6 +13,8 @@ class HevySet(TypedDict):
     type: Literal["warmup", "normal"]
     weight_kg: float
     reps: int
+    # These are returned by the API but should not be set on POSTs and PUTs
+    index: NotRequired[int]
 
 
 class HevyExercise(TypedDict):
@@ -20,6 +23,9 @@ class HevyExercise(TypedDict):
     exercise_template_id: str
     notes: str
     sets: list[HevySet]
+    # These are returned by the API but should not be set on POSTs and PUTs
+    index: NotRequired[int]
+    title: NotRequired[str]
 
 
 class HevyRoutineFolder(TypedDict):
@@ -105,12 +111,29 @@ def create_or_update_routine(
     title: str,
     folder_id: int,
     exercises: list[HevyExercise],
+    accessories_id: str,
     notes: str,
 ) -> HevyRoutine:
     """Create or update a routine in the Hevy API."""
     url = f"{BASE_URL}v1/routines"
 
     headers = {"api-key": api_key}
+
+    logger.debug(f"Exercises: {exercises}")
+    if accessories_id:
+        logger.debug(f"Accessories id: {accessories_id}")
+        accessories_routine = next((r for r in existing_routines if r["id"] == accessories_id), None)
+        logger.debug(f"Accessories routine: {accessories_routine}")
+        if accessories_routine:
+            accessories_exercises = accessories_routine["exercises"]
+            for exercise in accessories_exercises:
+                del exercise["index"]
+                del exercise["title"]
+                for set in exercise["sets"]:
+                    del set["index"]
+            exercises.extend(accessories_exercises)
+            logger.debug(f"Accessories exercises: {accessories_exercises}")
+
     data = {
         "routine": {
             "title": title,
@@ -135,8 +158,10 @@ def create_or_update_routine(
     return cast(HevyRoutine, response.json())
 
 
+# TODO: move this into main
 def setup_routines(
     api_key: str,
+    config: Config,
     notes: str,
     squats: list[HevyExercise],
     bench: list[HevyExercise],
@@ -170,12 +195,18 @@ def setup_routines(
 
     routines = get_routines(api_key)
 
-    create_or_update_routine(api_key, routines, "Squat Day", folder_id, squats, notes)
-    create_or_update_routine(api_key, routines, "Bench Day", folder_id, bench, notes)
-    create_or_update_routine(api_key, routines, "Deadlift Day", folder_id, deads, notes)
-    create_or_update_routine(api_key, routines, "OHP Day", folder_id, ohp, notes)
+    squat_accessories_id = config["squat_accessories_id"] if "squat_accessories_id" in config else None
+    bench_accessories_id = config["bench_accessories_id"] if "bench_accessories_id" in config else None
+    deadlift_accessories_id = config["deadlift_accessories_id"] if "deadlift_accessories_id" in config else None
+    ohp_accessories_id = config["ohp_accessories_id"] if "ohp_accessories_id" in config else None
+
+    create_or_update_routine(api_key, routines, "Squat Day", folder_id, squats, squat_accessories_id, notes)
+    create_or_update_routine(api_key, routines, "Bench Day", folder_id, bench, bench_accessories_id, notes)
+    create_or_update_routine(api_key, routines, "Deadlift Day", folder_id, deads, deadlift_accessories_id, notes)
+    create_or_update_routine(api_key, routines, "OHP Day", folder_id, ohp, ohp_accessories_id, notes)
 
 
+# TODO: move this into main
 def lifts_to_hevy_sets(lifts: list[tuple[float | int, int] | None]) -> list[HevySet]:
     """Convert a list of lifts to a list of sets for the Hevy API."""
     exercises = []

@@ -7,5 +7,10 @@
     "squat_exercise_id": "D04AC939",
     "bench_exercise_id": "79D0BB3A",
     "deadlift_exercise_id": "C6272009",
-    "ohp_exercise_id": "7B8D84E8"
+    "ohp_exercise_id": "7B8D84E8",
+
+    "squat_accessories_id": "10ca7f99-8e54-4015-82be-cc15a11e618c",
+    "bench_accessories_id": "22c1cb6c-e3f1-43fe-8054-ea4fb8717174",
+    "deadlift_accessories_id": "abfa00a4-5213-41a4-87fa-7a90e5fdca01",
+    "ohp_accessories_id": "803226c8-a048-47ad-b8e1-5b61e9e4648e"
 }
