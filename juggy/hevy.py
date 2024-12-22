@@ -3,9 +3,6 @@ from typing import Literal, NotRequired, TypedDict, cast
 import requests
 from loguru import logger
 
-from juggy import util as u
-from juggy.config import Config
-
 
 class HevySet(TypedDict):
     """A single set in a Hevy exercise."""
@@ -156,66 +153,3 @@ def create_or_update_routine(
         response = requests.post(url, headers=headers, json=data)
         raise_for_status(response)
     return cast(HevyRoutine, response.json())
-
-
-# TODO: move this into main
-def setup_routines(
-    api_key: str,
-    config: Config,
-    notes: str,
-    squats: list[HevyExercise],
-    bench: list[HevyExercise],
-    deads: list[HevyExercise],
-    ohp: list[HevyExercise],
-) -> None:
-    """
-    Set up the routines in the Hevy API.
-
-    This will ensure we have 4 routines in a folder named "Juggy":
-    - Squat Day
-    - Bench Day
-    - Deadlift Day
-    - OHP Day
-
-    The routines and folder will be created if they don't exist, or updated if they do.
-    """
-    folders = get_folders(api_key)
-
-    for folder in folders:
-        if folder["title"] == "Juggy":
-            folder_id = folder["id"]
-            logger.info(f"Found Juggy folder with id {folder_id}")
-            break
-    else:
-        logger.info("Juggy folder does not exist, creating it")
-        response = create_folder(api_key, "Juggy")
-        logger.debug(f"Got response: {response}")
-        folder_id = response["id"]
-        logger.info(f"Created Juggy folder with id {folder_id}")
-
-    routines = get_routines(api_key)
-
-    squat_accessories_id = config["squat_accessories_id"] if "squat_accessories_id" in config else None
-    bench_accessories_id = config["bench_accessories_id"] if "bench_accessories_id" in config else None
-    deadlift_accessories_id = config["deadlift_accessories_id"] if "deadlift_accessories_id" in config else None
-    ohp_accessories_id = config["ohp_accessories_id"] if "ohp_accessories_id" in config else None
-
-    create_or_update_routine(api_key, routines, "Squat Day", folder_id, squats, squat_accessories_id, notes)
-    create_or_update_routine(api_key, routines, "Bench Day", folder_id, bench, bench_accessories_id, notes)
-    create_or_update_routine(api_key, routines, "Deadlift Day", folder_id, deads, deadlift_accessories_id, notes)
-    create_or_update_routine(api_key, routines, "OHP Day", folder_id, ohp, ohp_accessories_id, notes)
-
-
-# TODO: move this into main
-def lifts_to_hevy_sets(lifts: list[tuple[float | int, int] | None]) -> list[HevySet]:
-    """Convert a list of lifts to a list of sets for the Hevy API."""
-    exercises = []
-    type = "warmup"
-    for lift in lifts:
-        if lift is None:
-            type = "normal"
-            continue
-        weight_lbs, reps = lift
-        weight_kg = u.lbs_to_kgs(weight_lbs)
-        exercises.append({"type": type, "weight_kg": weight_kg, "reps": reps})
-    return cast(list[HevySet], exercises)

@@ -1,7 +1,7 @@
-"""Tests for hevy module."""
+"""Tests for main module."""
 
 
-from juggy.hevy import lifts_to_hevy_sets
+from juggy.main import lifts_to_hevy_sets
 
 
 def test_lifts_to_hevy_sets_basic() -> None:
