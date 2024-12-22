@@ -3,6 +3,9 @@ from typing import Literal, NotRequired, TypedDict, cast
 import requests
 from loguru import logger
 
+BASE_URL = "https://api.hevyapp.com/"
+PAGE_SIZE = 10
+
 
 class HevySet(TypedDict):
     """A single set in a Hevy exercise."""
@@ -40,10 +43,6 @@ class HevyRoutine(TypedDict):
     notes: str
     folder_id: int
     exercises: list[HevyExercise]
-
-
-BASE_URL = "https://api.hevyapp.com/"
-PAGE_SIZE = 10
 
 
 def raise_for_status(response: requests.Response) -> None:
@@ -108,8 +107,7 @@ def create_or_update_routine(
     title: str,
     folder_id: int,
     exercises: list[HevyExercise],
-    accessories_id: str,
-    notes: str,
+    accessories_id: str | None,
 ) -> HevyRoutine:
     """Create or update a routine in the Hevy API."""
     url = f"{BASE_URL}v1/routines"
@@ -136,7 +134,6 @@ def create_or_update_routine(
             "title": title,
             "folder_id": folder_id,
             "exercises": exercises,
-            # "notes": notes,
         }
     }
 
