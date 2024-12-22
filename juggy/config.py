@@ -1,5 +1,5 @@
 import json
-from typing import TypedDict, cast
+from typing import NotRequired, TypedDict, cast
 
 
 class Config(TypedDict):
@@ -17,10 +17,10 @@ class Config(TypedDict):
     ohp_exercise_id: str
 
     # These are the id's of accessories that will be added to the main lifts
-    squat_accessories_id: str
-    bench_accessories_id: str
-    deadlift_accessories_id: str
-    ohp_accessories_id: str
+    squat_accessories_id: NotRequired[str]
+    bench_accessories_id: NotRequired[str]
+    deadlift_accessories_id: NotRequired[str]
+    ohp_accessories_id: NotRequired[str]
 
 
 def save_config(config: Config, filename: str = "config.json") -> None:

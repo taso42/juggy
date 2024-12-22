@@ -29,7 +29,6 @@ def lifts_to_hevy_sets(lifts: list[tuple[float | int, int] | None]) -> list[h.He
 def setup_routines(
     api_key: str,
     config: c.Config,
-    notes: str,
     squats: list[h.HevyExercise],
     bench: list[h.HevyExercise],
     deads: list[h.HevyExercise],
@@ -67,10 +66,10 @@ def setup_routines(
     deadlift_accessories_id = config["deadlift_accessories_id"] if "deadlift_accessories_id" in config else None
     ohp_accessories_id = config["ohp_accessories_id"] if "ohp_accessories_id" in config else None
 
-    h.create_or_update_routine(api_key, routines, "Squat Day", folder_id, squats, squat_accessories_id, notes)
-    h.create_or_update_routine(api_key, routines, "Bench Day", folder_id, bench, bench_accessories_id, notes)
-    h.create_or_update_routine(api_key, routines, "Deadlift Day", folder_id, deads, deadlift_accessories_id, notes)
-    h.create_or_update_routine(api_key, routines, "OHP Day", folder_id, ohp, ohp_accessories_id, notes)
+    h.create_or_update_routine(api_key, routines, "Squat Day", folder_id, squats, squat_accessories_id)
+    h.create_or_update_routine(api_key, routines, "Bench Day", folder_id, bench, bench_accessories_id)
+    h.create_or_update_routine(api_key, routines, "Deadlift Day", folder_id, deads, deadlift_accessories_id)
+    h.create_or_update_routine(api_key, routines, "OHP Day", folder_id, ohp, ohp_accessories_id)
 
 
 def setup_week(api_key: str, config: c.Config, wave: int, week: int) -> None:
@@ -97,7 +96,6 @@ def setup_week(api_key: str, config: c.Config, wave: int, week: int) -> None:
     setup_routines(
         api_key,
         config,
-        f"Wave {wave}, Week {week}",
         [{"exercise_template_id": config["squat_exercise_id"], "sets": lifts_to_hevy_sets(squats), "notes": notes}],
         [{"exercise_template_id": config["bench_exercise_id"], "sets": lifts_to_hevy_sets(bench), "notes": notes}],
         [{"exercise_template_id": config["deadlift_exercise_id"], "sets": lifts_to_hevy_sets(deads), "notes": notes}],
@@ -107,7 +105,10 @@ def setup_week(api_key: str, config: c.Config, wave: int, week: int) -> None:
 
 def main() -> None:
     dotenv.load_dotenv()
-    api_key = os.getenv("HEVY_API_KEY", "undefined")
+    api_key = os.getenv("HEVY_API_KEY")
+
+    if not api_key:
+        exit("HEVY_API_KEY is not set")
 
     config = c.load_config()
 
