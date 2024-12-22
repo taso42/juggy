@@ -113,10 +113,31 @@ def main() -> None:
     config = c.load_config()
 
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-c",
+        "--command",
+        choices=["program", "maxes"],
+        required=True,
+        help="The command to execute.  `program`will set up the routines for the week. "
+        "`maxes` will recompute training maxes for the next wave. "
+        "When using `program`, --wave and --week are required. "
+        "When using `maxes`, --foo is required",
+    )
     parser.add_argument("--wave", type=int, required=True, help="The wave of the program (1-4)")
-    parser.add_argument("--week", type=int, required=True, help="The week number of the program (1-4)")
+    parser.add_argument("--week", type=int, help="The week number of the program (1-4)")
+
     args = parser.parse_args()
-    setup_week(api_key, config, args.wave, args.week)
+    if args.command == "program":
+        if not args.wave or not args.week:
+            parser.error("Wave and week are required for program")
+        setup_week(api_key, config, args.wave, args.week)
+    elif args.command == "maxes":
+        print("Recomputing training maxes")
+        # Walk backwards in training history and find the top set for each lift in the wave. 
+        # This might require some heuristical way of searching.
+        # Given the wave we're in, we know the expected reps (10, 8, 5, or 3)
+        # With the information above in hand, we can recompute the training maxes for the next wave.
+        # Print a summary and ask the user to confirm before saving.
 
 
 if __name__ == "__main__":
