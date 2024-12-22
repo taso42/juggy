@@ -1,12 +1,76 @@
 """Main application module."""
 import argparse
 import os
+from typing import cast
 
 import dotenv
+from loguru import logger
 
 import juggy.algo as a
 import juggy.config as c
 import juggy.hevy as h
+from juggy import util as u
+
+
+def lifts_to_hevy_sets(lifts: list[tuple[float | int, int] | None]) -> list[h.HevySet]:
+    """Convert a list of lifts to a list of sets for the Hevy API."""
+    exercises = []
+    type = "warmup"
+    for lift in lifts:
+        if lift is None:
+            type = "normal"
+            continue
+        weight_lbs, reps = lift
+        weight_kg = u.lbs_to_kgs(weight_lbs)
+        exercises.append({"type": type, "weight_kg": weight_kg, "reps": reps})
+    return cast(list[h.HevySet], exercises)
+
+
+def setup_routines(
+    api_key: str,
+    config: c.Config,
+    notes: str,
+    squats: list[h.HevyExercise],
+    bench: list[h.HevyExercise],
+    deads: list[h.HevyExercise],
+    ohp: list[h.HevyExercise],
+) -> None:
+    """
+    Set up the routines in the Hevy API.
+
+    This will ensure we have 4 routines in a folder named "Juggy":
+    - Squat Day
+    - Bench Day
+    - Deadlift Day
+    - OHP Day
+
+    The routines and folder will be created if they don't exist, or updated if they do.
+    """
+    folders = h.get_folders(api_key)
+
+    for folder in folders:
+        if folder["title"] == "Juggy":
+            folder_id = folder["id"]
+            logger.info(f"Found Juggy folder with id {folder_id}")
+            break
+    else:
+        logger.info("Juggy folder does not exist, creating it")
+        response = h.create_folder(api_key, "Juggy")
+        logger.debug(f"Got response: {response}")
+        folder_id = response["id"]
+        logger.info(f"Created Juggy folder with id {folder_id}")
+
+    routines = h.get_routines(api_key)
+
+    squat_accessories_id = config["squat_accessories_id"] if "squat_accessories_id" in config else None
+    bench_accessories_id = config["bench_accessories_id"] if "bench_accessories_id" in config else None
+    deadlift_accessories_id = config["deadlift_accessories_id"] if "deadlift_accessories_id" in config else None
+    ohp_accessories_id = config["ohp_accessories_id"] if "ohp_accessories_id" in config else None
+
+    h.create_or_update_routine(api_key, routines, "Squat Day", folder_id, squats, squat_accessories_id, notes)
+    h.create_or_update_routine(api_key, routines, "Bench Day", folder_id, bench, bench_accessories_id, notes)
+    h.create_or_update_routine(api_key, routines, "Deadlift Day", folder_id, deads, deadlift_accessories_id, notes)
+    h.create_or_update_routine(api_key, routines, "OHP Day", folder_id, ohp, ohp_accessories_id, notes)
 
 
 def setup_week(api_key: str, config: c.Config, wave: int, week: int) -> None:
@@ -30,14 +94,14 @@ def setup_week(api_key: str, config: c.Config, wave: int, week: int) -> None:
 
     notes = f"Wave {wave}, Week {week}"
 
-    h.setup_routines(
+    setup_routines(
         api_key,
         config,
         f"Wave {wave}, Week {week}",
-        [{"exercise_template_id": config["squat_exercise_id"], "sets": h.lifts_to_hevy_sets(squats), "notes": notes}],
-        [{"exercise_template_id": config["bench_exercise_id"], "sets": h.lifts_to_hevy_sets(bench), "notes": notes}],
-        [{"exercise_template_id": config["deadlift_exercise_id"], "sets": h.lifts_to_hevy_sets(deads), "notes": notes}],
-        [{"exercise_template_id": config["ohp_exercise_id"], "sets": h.lifts_to_hevy_sets(ohp), "notes": notes}],
+        [{"exercise_template_id": config["squat_exercise_id"], "sets": lifts_to_hevy_sets(squats), "notes": notes}],
+        [{"exercise_template_id": config["bench_exercise_id"], "sets": lifts_to_hevy_sets(bench), "notes": notes}],
+        [{"exercise_template_id": config["deadlift_exercise_id"], "sets": lifts_to_hevy_sets(deads), "notes": notes}],
+        [{"exercise_template_id": config["ohp_exercise_id"], "sets": lifts_to_hevy_sets(ohp), "notes": notes}],
     )
 
 
