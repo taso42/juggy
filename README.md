@@ -19,7 +19,14 @@ poetry install
 
 2. Run the application:
 ```bash
-python -m juggy.main --wave <wave> --week <week>
+# To program the routines for the week:
+python -m juggy.main -c program --wave <wave> --week <week>
+
+# To calculate new training maxes based on past performance:
+python -m juggy.main -c maxes --wave <wave>
+
+# For help:
+python -m juggy.main -h
 ```
 
 ## Development

@@ -1,6 +1,7 @@
 """Main application logic and entry point."""
 import argparse
 import os
+import shutil
 from typing import cast
 
 import dotenv
@@ -54,17 +55,18 @@ def setup_routines(
     """
     folders = h.get_folders(api_key)
 
+    folder_name = config["folder"]
     for folder in folders:
-        if folder["title"] == "Juggy":
+        if folder["title"] == folder_name:
             folder_id = folder["id"]
-            logger.info(f"Found Juggy folder with id {folder_id}")
+            logger.info(f"Found {folder_name} folder with id {folder_id}")
             break
     else:
-        logger.info("Juggy folder does not exist, creating it")
-        response = h.create_folder(api_key, "Juggy")
+        logger.info(f"{folder_name} folder does not exist, creating it")
+        response = h.create_folder(api_key, folder_name)
         logger.debug(f"Got response: {response}")
         folder_id = response["id"]
-        logger.info(f"Created Juggy folder with id {folder_id}")
+        logger.info(f"Created {folder_name} folder with id {folder_id}")
 
     routines = h.get_routines(api_key)
 
@@ -189,8 +191,6 @@ def main() -> None:
     if not api_key:
         exit("HEVY_API_KEY is not set")
 
-    config = c.load_config()
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-c",
@@ -204,8 +204,10 @@ def main() -> None:
     )
     parser.add_argument("--wave", type=int, required=True, help="The wave of the program (1-4)")
     parser.add_argument("--week", type=int, help="The week number of the program (1-4)")
+    parser.add_argument("--config", type=str, default="config.json", help="Config file to use")
 
     args = parser.parse_args()
+    config = c.load_config(args.config)
     if args.command == "program":
         if not args.wave or not args.week:
             parser.error("Wave and week are required for program")
@@ -257,14 +259,29 @@ def main() -> None:
             old_ohp_tm, ohp_top_set_weight, expected_reps, top_set_reps["ohp"], OHP_INCREMENT, ONE_REP_MAX_THRESHOLD
         )
 
-        print(f"Squats: {old_squat_tm} -> {new_squat_tm}")
-        print(f"Bench: {old_bench_tm} -> {new_bench_tm}")
-        print(f"Deadlift: {old_deadlift_tm} -> {new_deadlift_tm}")
-        print(f"OHP: {old_ohp_tm} -> {new_ohp_tm}")
+        print("New Training Maxes:")
+        print("-------------------")
+        print(f"Squats: {old_squat_tm}\t-> {new_squat_tm}")
+        print(f"Bench: {old_bench_tm}\t-> {new_bench_tm}")
+        print(f"Deadlift: {old_deadlift_tm}\t-> {new_deadlift_tm}")
+        print(f"OHP: {old_ohp_tm}\t-> {new_ohp_tm}")
 
-        config["squat_tm"] = new_squat_tm
-        config["bench_tm"] = new_bench_tm
-        config["deadlift_tm"] = new_deadlift_tm
+        print("\n")
+        print("To save these back to your config, please type SAVE.  To abort, hit enter.")
+        answer = input("> ")
+
+        if answer == "SAVE":
+            print(f"Backing up {args.config} to {args.config}.bak and saving...")
+            shutil.copyfile(args.config, f"{args.config}.bak")
+
+            config["squat_tm"] = new_squat_tm
+            config["bench_tm"] = new_bench_tm
+            config["deadlift_tm"] = new_deadlift_tm
+            config["ohp_tm"] = new_ohp_tm
+
+            c.save_config(config, args.config)
+        else:
+            print("Aborting...")
 
 
 if __name__ == "__main__":
