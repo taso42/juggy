@@ -56,59 +56,55 @@ class HevyWorkout(TypedDict):
     exercises: list[HevyExercise]
 
 
-def raise_for_status(response: requests.Response) -> None:
+def _raise_for_status(response: requests.Response) -> None:
     if str(response.status_code)[0] != "2":
         raise RuntimeError(f"Request failed with status code {response.status_code}: {response.text}")
+
+
+def _get_with_paging(api_key: str, url: str, object_name: str, short_circuit: int | None = None) -> list[dict]:
+    """Consume an API response with paging."""
+    headers = {"api-key": api_key}
+    page = 1
+    page_count = 1
+    all_objects: list[dict] = []
+    while page <= page_count:
+        params = {"page": page, "pageSize": PAGE_SIZE}
+        response = requests.get(url, params=params, headers=headers)
+        _raise_for_status(response)
+        results = response.json()
+        if object_name not in results:
+            return []
+        page, page_count, objects = (
+            results["page"],
+            results["page_count"],
+            results[object_name],
+        )
+        logger.debug(f"Page {page} of {page_count}")
+        page += 1
+        all_objects.extend(objects)
+        if short_circuit and len(all_objects) >= short_circuit:
+            break
+
+    return all_objects
 
 
 def get_folders(api_key: str) -> list[HevyRoutineFolder]:
     """Get all the folders from the Hevy API."""
     url = f"{BASE_URL}v1/routine_folders"
-    params = {"page": 1, "pageSize": PAGE_SIZE}
-    headers = {"api-key": api_key}
-    response = requests.get(url, params=params, headers=headers)
-    raise_for_status(response)
-    results = response.json()
-    if "routine_folders" in results:
-        page, page_count, routine_folders = (
-            results["page"],
-            results["page_count"],
-            results["routine_folders"],
-        )
-        # TODO: handle pagination
-        logger.debug(f"Page {page} of {page_count}")
-        return cast(list[HevyRoutineFolder], routine_folders)
-    else:
-        return []
+    return cast(list[HevyRoutineFolder], _get_with_paging(api_key, url, "routine_folders"))
 
 
 def get_workouts(api_key: str) -> list[HevyWorkout]:
     """Get all the workouts from the Hevy API.
     Currently returns only the last ~100."""
     url = f"{BASE_URL}v1/workouts"
-    headers = {"api-key": api_key}
-    page = 1
-    page_count = 99
-    all_workouts = []
-    while page <= page_count:
-        params = {"page": page, "pageSize": PAGE_SIZE}
-        response = requests.get(url, params=params, headers=headers)
-        raise_for_status(response)
-        results = response.json()
-        page, page_count, workouts = (
-            results["page"],
-            results["page_count"],
-            results["workouts"],
-        )
-        logger.debug(f"Page {page} of {page_count}")
-        all_workouts.extend(workouts)
+    return cast(list[HevyWorkout], _get_with_paging(api_key, url, "workouts", 100))
 
-        # crude short circuit
-        if len(all_workouts) >= 100:
-            break
-        page += 1
 
-    return cast(list[HevyWorkout], all_workouts)
+def get_routines(api_key: str) -> list[HevyRoutine]:
+    """Get all the routines from the Hevy API."""
+    url = f"{BASE_URL}v1/routines"
+    return cast(list[HevyRoutine], _get_with_paging(api_key, url, "routines"))
 
 
 def create_folder(api_key: str, title: str) -> HevyRoutineFolder:
@@ -118,27 +114,9 @@ def create_folder(api_key: str, title: str) -> HevyRoutineFolder:
     data = {"routine_folder": {"title": title}}
 
     response = requests.post(url, headers=headers, json=data)
-    raise_for_status(response)
+    _raise_for_status(response)
     logger.debug(f"Got response: {response}")
     return cast(HevyRoutineFolder, response.json()["routine_folder"])
-
-
-def get_routines(api_key: str) -> list[HevyRoutine]:
-    """Get all the routines from the Hevy API."""
-    url = f"{BASE_URL}v1/routines"
-    params = {"page": 1, "pageSize": PAGE_SIZE}
-    headers = {"api-key": api_key}
-    response = requests.get(url, params=params, headers=headers)
-    response.raise_for_status()
-    results = response.json()
-    page, page_count, routines = (
-        results["page"],
-        results["page_count"],
-        results["routines"],
-    )
-    # TODO: handle pagination
-    logger.debug(f"Page {page} of {page_count}")
-    return cast(list[HevyRoutine], routines)
 
 
 def create_or_update_routine(
@@ -186,9 +164,9 @@ def create_or_update_routine(
         logger.info(f"Updating routine {title} with id {routine_id}")
         url = f"{url}/{routine_id}"
         response = requests.put(url, headers=headers, json=data)
-        raise_for_status(response)
+        _raise_for_status(response)
     else:
         logger.info(f"Creating routine {title} in folder {folder_id}")
         response = requests.post(url, headers=headers, json=data)
-        raise_for_status(response)
+        _raise_for_status(response)
     return cast(HevyRoutine, response.json())
