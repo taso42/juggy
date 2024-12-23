@@ -79,7 +79,7 @@ def setup_routines(
     h.create_or_update_routine(api_key, routines, "OHP Day", folder_id, ohp, ohp_accessories)
 
 
-def setup_week(api_key: str, config: c.Config, wave: int, week: int) -> None:
+def _setup_week(api_key: str, config: c.Config, wave: int, week: int) -> None:
     """Setup a week in the Hevy API.
 
     Args:
@@ -182,21 +182,121 @@ def find_week3_top_sets_reps(config: c.Config, multiplier: float, workouts: list
     return {"squat": squat_top_set, "bench": bench_top_set, "deadlift": deadlift_top_set, "ohp": ohp_top_set}
 
 
+def _save_with_confirmation(config: c.Config, config_file_name: str) -> None:
+    print("To save these back to your config, please type SAVE.  To abort, hit enter.")
+    answer = input("> ")
+
+    if answer == "SAVE":
+        print(f"Backing up {config_file_name} to {config_file_name}.bak and saving...")
+        shutil.copyfile(config_file_name, f"{config_file_name}.bak")
+
+        print(f"Saving config to {config_file_name}")
+        c.save_config(config, config_file_name)
+    else:
+        print("Aborting...")
+
+
+def _handle_maxes(
+    api_key: str, config: c.Config, config_file_name: str, wave: int, workouts: list[h.HevyWorkout]
+) -> None:
+    multiplier = a.TEMPLATE[wave - 1][2][-1][0]
+
+    logger.info("Recomputing training maxes")
+    workouts = h.get_workouts(api_key)
+    multiplier = a.TEMPLATE[wave - 1][2][-1][0]
+    top_set_reps = find_week3_top_sets_reps(config, multiplier, workouts)
+
+    old_squat_tm = config["squat_tm"]
+    squat_top_set_weight = a.round_weight(old_squat_tm * multiplier, ROUND_WEIGHT_PRECISION)
+
+    old_bench_tm = config["bench_tm"]
+    bench_top_set_weight = a.round_weight(old_bench_tm * multiplier, ROUND_WEIGHT_PRECISION)
+
+    old_deadlift_tm = config["deadlift_tm"]
+    deadlift_top_set_weight = a.round_weight(old_deadlift_tm * multiplier, ROUND_WEIGHT_PRECISION)
+
+    old_ohp_tm = config["ohp_tm"]
+    ohp_top_set_weight = a.round_weight(old_ohp_tm * multiplier, ROUND_WEIGHT_PRECISION)
+
+    expected_reps = [10, 8, 5, 3][wave - 1]
+    new_squat_tm = a.compute_new_training_max(
+        old_squat_tm,
+        squat_top_set_weight,
+        expected_reps,
+        top_set_reps["squat"],
+        SQUAT_INCREMENT,
+        ONE_REP_MAX_THRESHOLD,
+    )
+    new_bench_tm = a.compute_new_training_max(
+        old_bench_tm,
+        bench_top_set_weight,
+        expected_reps,
+        top_set_reps["bench"],
+        BENCH_INCREMENT,
+        ONE_REP_MAX_THRESHOLD,
+    )
+    new_deadlift_tm = a.compute_new_training_max(
+        old_deadlift_tm,
+        deadlift_top_set_weight,
+        expected_reps,
+        top_set_reps["deadlift"],
+        DEADLIFT_INCREMENT,
+        ONE_REP_MAX_THRESHOLD,
+    )
+    new_ohp_tm = a.compute_new_training_max(
+        old_ohp_tm, ohp_top_set_weight, expected_reps, top_set_reps["ohp"], OHP_INCREMENT, ONE_REP_MAX_THRESHOLD
+    )
+
+    print("New Training Maxes:")
+    print("-------------------")
+    print(f"Squats: {old_squat_tm}\t-> {new_squat_tm}")
+    print(f"Bench: {old_bench_tm}\t-> {new_bench_tm}")
+    print(f"Deadlift: {old_deadlift_tm}\t-> {new_deadlift_tm}")
+    print(f"OHP: {old_ohp_tm}\t-> {new_ohp_tm}")
+
+    print("\n")
+    _save_with_confirmation(config, config_file_name)
+
+
+def _refresh_accessories(
+    api_key: str, config: c.Config, config_file_name: str, routine_id: str, accessories_name: str
+) -> None:
+    routines = h.get_routines(api_key)
+    exercises = h.get_exercises_from_routine(routine_id, routines)
+
+    if exercises:
+        print(f"Found {len(exercises)} accessories with id {routine_id} for {accessories_name}")
+        config[f"{accessories_name}_accessories"] = exercises  # type: ignore
+        _save_with_confirmation(config, config_file_name)
+    else:
+        logger.warning(f"Routine with id {routine_id} not found for {accessories_name}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-c",
         "--command",
-        choices=["program", "maxes"],
+        choices=["program", "maxes", "refresh_accessories"],
         required=True,
         help="The command to execute.  `program`will set up the routines for the week. "
         "`maxes` will recompute training maxes for the next wave. "
         "When using `program`, --wave and --week are required. "
         "When using `maxes`, --foo is required",
     )
-    parser.add_argument("--wave", type=int, required=True, help="The wave of the program (1-4)")
+    parser.add_argument("--wave", type=int, help="The wave of the program (1-4)")
     parser.add_argument("--week", type=int, help="The week number of the program (1-4)")
     parser.add_argument("--config", type=str, default="config.json", help="Config file to use")
+    parser.add_argument(
+        "--routine-id",
+        type=str,
+        help="The id of the routine to use for accessories",
+    )
+    parser.add_argument(
+        "--accessories-type",
+        choices=["squat", "bench", "deadlift", "ohp"],
+        help="The type of the accessories to refresh",
+    )
 
     args = parser.parse_args()
     config = c.load_config(args.config)
@@ -205,77 +305,15 @@ def main() -> None:
     if args.command == "program":
         if not args.wave or not args.week:
             parser.error("Wave and week are required for program")
-        setup_week(api_key, config, args.wave, args.week)
+        _setup_week(api_key, config, args.wave, args.week)
     elif args.command == "maxes":
-        logger.info("Recomputing training maxes")
-        workouts = h.get_workouts(api_key)
-        multiplier = a.TEMPLATE[args.wave - 1][2][-1][0]
-        top_set_reps = find_week3_top_sets_reps(config, multiplier, workouts)
-
-        old_squat_tm = config["squat_tm"]
-        squat_top_set_weight = a.round_weight(old_squat_tm * multiplier, ROUND_WEIGHT_PRECISION)
-
-        old_bench_tm = config["bench_tm"]
-        bench_top_set_weight = a.round_weight(old_bench_tm * multiplier, ROUND_WEIGHT_PRECISION)
-
-        old_deadlift_tm = config["deadlift_tm"]
-        deadlift_top_set_weight = a.round_weight(old_deadlift_tm * multiplier, ROUND_WEIGHT_PRECISION)
-
-        old_ohp_tm = config["ohp_tm"]
-        ohp_top_set_weight = a.round_weight(old_ohp_tm * multiplier, ROUND_WEIGHT_PRECISION)
-
-        expected_reps = [10, 8, 5, 3][args.wave - 1]
-        new_squat_tm = a.compute_new_training_max(
-            old_squat_tm,
-            squat_top_set_weight,
-            expected_reps,
-            top_set_reps["squat"],
-            SQUAT_INCREMENT,
-            ONE_REP_MAX_THRESHOLD,
-        )
-        new_bench_tm = a.compute_new_training_max(
-            old_bench_tm,
-            bench_top_set_weight,
-            expected_reps,
-            top_set_reps["bench"],
-            BENCH_INCREMENT,
-            ONE_REP_MAX_THRESHOLD,
-        )
-        new_deadlift_tm = a.compute_new_training_max(
-            old_deadlift_tm,
-            deadlift_top_set_weight,
-            expected_reps,
-            top_set_reps["deadlift"],
-            DEADLIFT_INCREMENT,
-            ONE_REP_MAX_THRESHOLD,
-        )
-        new_ohp_tm = a.compute_new_training_max(
-            old_ohp_tm, ohp_top_set_weight, expected_reps, top_set_reps["ohp"], OHP_INCREMENT, ONE_REP_MAX_THRESHOLD
-        )
-
-        print("New Training Maxes:")
-        print("-------------------")
-        print(f"Squats: {old_squat_tm}\t-> {new_squat_tm}")
-        print(f"Bench: {old_bench_tm}\t-> {new_bench_tm}")
-        print(f"Deadlift: {old_deadlift_tm}\t-> {new_deadlift_tm}")
-        print(f"OHP: {old_ohp_tm}\t-> {new_ohp_tm}")
-
-        print("\n")
-        print("To save these back to your config, please type SAVE.  To abort, hit enter.")
-        answer = input("> ")
-
-        if answer == "SAVE":
-            print(f"Backing up {args.config} to {args.config}.bak and saving...")
-            shutil.copyfile(args.config, f"{args.config}.bak")
-
-            config["squat_tm"] = new_squat_tm
-            config["bench_tm"] = new_bench_tm
-            config["deadlift_tm"] = new_deadlift_tm
-            config["ohp_tm"] = new_ohp_tm
-
-            c.save_config(config, args.config)
-        else:
-            print("Aborting...")
+        if not args.wave:
+            parser.error("Wave is required for maxes")
+        _handle_maxes(api_key, config, args.config, args.wave, h.get_workouts(api_key))
+    elif args.command == "refresh_accessories":
+        if not args.routine_id or not args.accessories_type:
+            parser.error("Routine id and accessories type are required for refresh_accessories")
+        _refresh_accessories(api_key, config, args.config, args.routine_id, args.accessories_type)
 
 
 if __name__ == "__main__":
