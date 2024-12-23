@@ -126,19 +126,26 @@ def create_folder(api_key: str, title: str) -> HevyRoutineFolder:
 def get_routines(api_key: str) -> list[HevyRoutine]:
     """Get all the routines from the Hevy API."""
     url = f"{BASE_URL}v1/routines"
-    params = {"page": 1, "pageSize": PAGE_SIZE}
+
     headers = {"api-key": api_key}
-    response = requests.get(url, params=params, headers=headers)
-    response.raise_for_status()
-    results = response.json()
-    page, page_count, routines = (
-        results["page"],
-        results["page_count"],
-        results["routines"],
-    )
-    # TODO: handle pagination
-    logger.debug(f"Page {page} of {page_count}")
-    return cast(list[HevyRoutine], routines)
+    page = 1
+    page_count = 1
+    all_routines = []
+    while page <= page_count:
+        params = {"page": page, "pageSize": PAGE_SIZE}
+        response = requests.get(url, params=params, headers=headers)
+        raise_for_status(response)
+        results = response.json()
+        page, page_count, routines = (
+            results["page"],
+            results["page_count"],
+            results["routines"],
+        )
+        logger.debug(f"Page {page} of {page_count}")
+        page += 1
+        all_routines.extend(routines)
+
+    return cast(list[HevyRoutine], all_routines)
 
 
 def create_or_update_routine(
