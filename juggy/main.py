@@ -68,15 +68,15 @@ def setup_routines(
 
     routines = h.get_routines(api_key)
 
-    squat_accessories_id = config["squat_accessories_id"] if "squat_accessories_id" in config else None
-    bench_accessories_id = config["bench_accessories_id"] if "bench_accessories_id" in config else None
-    deadlift_accessories_id = config["deadlift_accessories_id"] if "deadlift_accessories_id" in config else None
-    ohp_accessories_id = config["ohp_accessories_id"] if "ohp_accessories_id" in config else None
+    squat_accessories = config["squat_accessories"] if "squat_accessories" in config else None
+    bench_accessories = config["bench_accessories"] if "bench_accessories" in config else None
+    deadlift_accessories = config["deadlift_accessories"] if "deadlift_accessories" in config else None
+    ohp_accessories = config["ohp_accessories"] if "ohp_accessories" in config else None
 
-    h.create_or_update_routine(api_key, routines, "Squat Day", folder_id, squats, squat_accessories_id)
-    h.create_or_update_routine(api_key, routines, "Bench Day", folder_id, bench, bench_accessories_id)
-    h.create_or_update_routine(api_key, routines, "Deadlift Day", folder_id, deads, deadlift_accessories_id)
-    h.create_or_update_routine(api_key, routines, "OHP Day", folder_id, ohp, ohp_accessories_id)
+    h.create_or_update_routine(api_key, routines, "Squat Day", folder_id, squats, squat_accessories)
+    h.create_or_update_routine(api_key, routines, "Bench Day", folder_id, bench, bench_accessories)
+    h.create_or_update_routine(api_key, routines, "Deadlift Day", folder_id, deads, deadlift_accessories)
+    h.create_or_update_routine(api_key, routines, "OHP Day", folder_id, ohp, ohp_accessories)
 
 
 def setup_week(api_key: str, config: c.Config, wave: int, week: int) -> None:

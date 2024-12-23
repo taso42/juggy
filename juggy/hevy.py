@@ -79,7 +79,7 @@ def _get_with_paging(api_key: str, url: str, object_name: str, short_circuit: in
             results["page_count"],
             results[object_name],
         )
-        logger.debug(f"Page {page} of {page_count}")
+        logger.debug(f"Page {page} of {page_count} {object_name}")
         page += 1
         all_objects.extend(objects)
         if short_circuit and len(all_objects) >= short_circuit:
@@ -107,6 +107,24 @@ def get_routines(api_key: str) -> list[HevyRoutine]:
     return cast(list[HevyRoutine], _get_with_paging(api_key, url, "routines"))
 
 
+def get_exercises_from_routine(routine_id: str | None, all_routines: list[HevyRoutine]) -> list[HevyExercise] | None:
+    """Search for and return the HevyExercises from a specific routine identified by routine_id.
+    The results are tidied up to remove the index and title fields, making them suitable for PUTs to the Hevy API."""
+    routine = next((r for r in all_routines if r["id"] == routine_id), None)
+    logger.debug(f"Routine: {routine}")
+    if routine:
+        exercises = routine["exercises"]
+        for exercise in exercises:
+            del exercise["index"]
+            del exercise["title"]
+            for set in exercise["sets"]:
+                del set["index"]
+        logger.debug(f"Exercises: {exercises}")
+        return exercises
+    else:
+        return None
+
+
 def create_folder(api_key: str, title: str) -> HevyRoutineFolder:
     """Create a folder in the Hevy API."""
     url = f"{BASE_URL}v1/routine_folders"
@@ -125,27 +143,17 @@ def create_or_update_routine(
     title: str,
     folder_id: int,
     exercises: list[HevyExercise],
-    accessories_id: str | None,
+    accessories: list[HevyExercise] | None = None,
 ) -> HevyRoutine:
     """Create or update a routine in the Hevy API."""
     url = f"{BASE_URL}v1/routines"
 
     headers = {"api-key": api_key}
 
-    logger.debug(f"Exercises: {exercises}")
-    if accessories_id:
-        logger.debug(f"Accessories id: {accessories_id}")
-        accessories_routine = next((r for r in existing_routines if r["id"] == accessories_id), None)
-        logger.debug(f"Accessories routine: {accessories_routine}")
-        if accessories_routine:
-            accessories_exercises = accessories_routine["exercises"]
-            for exercise in accessories_exercises:
-                del exercise["index"]
-                del exercise["title"]
-                for set in exercise["sets"]:
-                    del set["index"]
-            exercises.extend(accessories_exercises)
-            logger.debug(f"Accessories exercises: {accessories_exercises}")
+    if accessories:
+        exercises.extend(accessories)
+    else:
+        logger.warning(f"No accessories provided for routine {title}")
 
     data = {
         "routine": {

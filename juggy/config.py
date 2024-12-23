@@ -1,9 +1,11 @@
 import json
 from typing import NotRequired, TypedDict, cast
 
+from juggy.hevy import HevyExercise
+
 
 class Config(TypedDict):
-    """Configuratino Settings."""
+    """Configuration Settings."""
 
     api_key: str
 
@@ -20,11 +22,10 @@ class Config(TypedDict):
     deadlift_exercise_id: str
     ohp_exercise_id: str
 
-    # These are the id's of accessories that will be added to the main lifts
-    squat_accessories_id: NotRequired[str]
-    bench_accessories_id: NotRequired[str]
-    deadlift_accessories_id: NotRequired[str]
-    ohp_accessories_id: NotRequired[str]
+    squat_accessories: NotRequired[list[HevyExercise]]
+    bench_accessories: NotRequired[list[HevyExercise]]
+    deadlift_accessories: NotRequired[list[HevyExercise]]
+    ohp_accessories: NotRequired[list[HevyExercise]]
 
 
 def save_config(config: Config, filename: str = "config.json") -> None:
