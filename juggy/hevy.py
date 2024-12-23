@@ -45,6 +45,17 @@ class HevyRoutine(TypedDict):
     exercises: list[HevyExercise]
 
 
+class HevyWorkout(TypedDict):
+    """A Hevy workout."""
+
+    id: NotRequired[str]
+    title: str
+    is_private: bool
+    start_time: str
+    end_time: str
+    exercises: list[HevyExercise]
+
+
 def raise_for_status(response: requests.Response) -> None:
     if str(response.status_code)[0] != "2":
         raise RuntimeError(f"Request failed with status code {response.status_code}: {response.text}")
@@ -65,10 +76,39 @@ def get_folders(api_key: str) -> list[HevyRoutineFolder]:
             results["routine_folders"],
         )
         # TODO: handle pagination
-        logger.info(f"Page {page} of {page_count}")
+        logger.debug(f"Page {page} of {page_count}")
         return cast(list[HevyRoutineFolder], routine_folders)
     else:
         return []
+
+
+def get_workouts(api_key: str) -> list[HevyWorkout]:
+    """Get all the workouts from the Hevy API.
+    Currently returns only the last ~100."""
+    url = f"{BASE_URL}v1/workouts"
+    headers = {"api-key": api_key}
+    page = 1
+    page_count = 99
+    all_workouts = []
+    while page <= page_count:
+        params = {"page": page, "pageSize": PAGE_SIZE}
+        response = requests.get(url, params=params, headers=headers)
+        raise_for_status(response)
+        results = response.json()
+        page, page_count, workouts = (
+            results["page"],
+            results["page_count"],
+            results["workouts"],
+        )
+        logger.debug(f"Page {page} of {page_count}")
+        all_workouts.extend(workouts)
+
+        # crude short circuit
+        if len(all_workouts) >= 100:
+            break
+        page += 1
+
+    return cast(list[HevyWorkout], all_workouts )
 
 
 def create_folder(api_key: str, title: str) -> HevyRoutineFolder:
@@ -97,7 +137,7 @@ def get_routines(api_key: str) -> list[HevyRoutine]:
         results["routines"],
     )
     # TODO: handle pagination
-    logger.info(f"Page {page} of {page_count}")
+    logger.debug(f"Page {page} of {page_count}")
     return cast(list[HevyRoutine], routines)
 
 
