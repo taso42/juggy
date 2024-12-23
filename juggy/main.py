@@ -1,10 +1,8 @@
 """Main application logic and entry point."""
 import argparse
-import os
 import shutil
 from typing import cast
 
-import dotenv
 from loguru import logger
 
 import juggy.algo as a
@@ -185,12 +183,6 @@ def find_week3_top_sets_reps(config: c.Config, multiplier: float, workouts: list
 
 
 def main() -> None:
-    dotenv.load_dotenv()
-    api_key = os.getenv("HEVY_API_KEY")
-
-    if not api_key:
-        exit("HEVY_API_KEY is not set")
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-c",
@@ -208,6 +200,8 @@ def main() -> None:
 
     args = parser.parse_args()
     config = c.load_config(args.config)
+    api_key = config["api_key"]
+
     if args.command == "program":
         if not args.wave or not args.week:
             parser.error("Wave and week are required for program")

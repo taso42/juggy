@@ -5,6 +5,8 @@ from typing import NotRequired, TypedDict, cast
 class Config(TypedDict):
     """Configuratino Settings."""
 
+    api_key: str
+
     squat_tm: float
     bench_tm: float
     deadlift_tm: float

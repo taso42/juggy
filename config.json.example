@@ -1,4 +1,6 @@
 {
+    "api_key": "YOUR_API_KEY",
+
     "squat_tm": 285,
     "bench_tm": 220,
     "deadlift_tm": 430,
