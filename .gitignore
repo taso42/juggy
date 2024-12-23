@@ -5,3 +5,4 @@ venv
 .coverage
 config.json
 scratch
+config.json.bak

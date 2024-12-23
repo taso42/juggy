@@ -120,7 +120,7 @@ def create_folder(api_key: str, title: str) -> HevyRoutineFolder:
     response = requests.post(url, headers=headers, json=data)
     raise_for_status(response)
     logger.debug(f"Got response: {response}")
-    return cast(HevyRoutineFolder, response.json())
+    return cast(HevyRoutineFolder, response.json()["routine_folder"])
 
 
 def get_routines(api_key: str) -> list[HevyRoutine]:
@@ -177,7 +177,9 @@ def create_or_update_routine(
         }
     }
 
-    existing_routine = next((r for r in existing_routines if r["title"] == title), None)
+    existing_routine = next(
+        (r for r in existing_routines if (r["title"] == title and r["folder_id"] == folder_id)), None
+    )
     if existing_routine:
         routine_id = existing_routine["id"]
         del data["routine"]["folder_id"]

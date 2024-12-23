@@ -10,6 +10,8 @@ class Config(TypedDict):
     deadlift_tm: float
     ohp_tm: float
 
+    folder: str
+
     # These are the exercise IDs corresponding to the main lifts
     squat_exercise_id: str
     bench_exercise_id: str
