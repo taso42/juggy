@@ -5,10 +5,10 @@ from typing import NotRequired, TypedDict, cast
 class Config(TypedDict):
     """Configuratino Settings."""
 
-    squat_tm: int
-    bench_tm: int
-    deadlift_tm: int
-    ohp_tm: int
+    squat_tm: float
+    bench_tm: float
+    deadlift_tm: float
+    ohp_tm: float
 
     # These are the exercise IDs corresponding to the main lifts
     squat_exercise_id: str
