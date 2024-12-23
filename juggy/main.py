@@ -11,6 +11,8 @@ import juggy.config as c
 import juggy.hevy as h
 from juggy import util as u
 
+ROUND_WEIGHT_PRECISION = 5
+
 
 def lifts_to_hevy_sets(lifts: list[tuple[float | int, int] | None]) -> list[h.HevySet]:
     """Convert a list of lifts to a list of sets for the Hevy API."""
@@ -86,10 +88,10 @@ def setup_week(api_key: str, config: c.Config, wave: int, week: int) -> None:
         raise ValueError(f"Invalid week number: {week}")
 
     protocol = a.TEMPLATE[wave - 1][week - 1]
-    squats = a.generate_lifts(protocol, config["squat_tm"], 5, False)
-    bench = a.generate_lifts(protocol, config["bench_tm"], 5, False)
-    deads = a.generate_lifts(protocol, config["deadlift_tm"], 5, True)
-    ohp = a.generate_lifts(protocol, config["ohp_tm"], 5, False)
+    squats = a.generate_lifts(protocol, config["squat_tm"], ROUND_WEIGHT_PRECISION, False)
+    bench = a.generate_lifts(protocol, config["bench_tm"], ROUND_WEIGHT_PRECISION, False)
+    deads = a.generate_lifts(protocol, config["deadlift_tm"], ROUND_WEIGHT_PRECISION, True)
+    ohp = a.generate_lifts(protocol, config["ohp_tm"], ROUND_WEIGHT_PRECISION, False)
 
     notes = f"Wave {wave}, Week {week}"
 
@@ -101,6 +103,71 @@ def setup_week(api_key: str, config: c.Config, wave: int, week: int) -> None:
         [{"exercise_template_id": config["deadlift_exercise_id"], "sets": lifts_to_hevy_sets(deads), "notes": notes}],
         [{"exercise_template_id": config["ohp_exercise_id"], "sets": lifts_to_hevy_sets(ohp), "notes": notes}],
     )
+
+
+def _compute_top_set_weight(multiplier: float, training_max: float) -> float:
+    """Compute the expected weight of the top set based on the multiplier and training max."""
+    return u.lbs_to_kgs(a.round_weight(training_max * multiplier, ROUND_WEIGHT_PRECISION))
+
+
+def _weights_equal(weight1: float, weight2: float) -> bool:
+    return abs(weight1 - weight2) < 0.01
+
+
+def _get_exercise_top_set_reps(exercise: h.HevyExercise, exercise_id: str, top_set_weight_kgs: float) -> int | None:
+    if exercise["exercise_template_id"] == exercise_id:
+        sets = exercise["sets"]
+        if _weights_equal(sets[-1]["weight_kg"], top_set_weight_kgs):
+            return sets[-1]["reps"]
+    return None
+
+
+def find_week3_top_sets(config: c.Config, wave: int, workouts: list[h.HevyWorkout]) -> None:
+    """Finds the top set for each main lift in wave 3 by searching backwards in training history.
+    The way we find that is to search for a top set that matches algo.TEMPLATE[wave][3][last_element]. This is
+    obviously not foolproof because if the user has changed the protocol, we won't find it.
+    """
+    squat_exercise_id = config["squat_exercise_id"]
+    bench_exercise_id = config["bench_exercise_id"]
+    deadlift_exercise_id = config["deadlift_exercise_id"]
+    ohp_exercise_id = config["ohp_exercise_id"]
+
+    multiplier = a.TEMPLATE[wave - 1][2][-1][0]
+
+    squat_top_set_weight_kgs = _compute_top_set_weight(multiplier, config["squat_tm"])
+    bench_top_set_weight_kgs = _compute_top_set_weight(multiplier, config["bench_tm"])
+    deadlift_top_set_weight_kgs = _compute_top_set_weight(multiplier, config["deadlift_tm"])
+    ohp_top_set_weight_kgs = _compute_top_set_weight(multiplier, config["ohp_tm"])
+
+    logger.debug(f"Looking for Squat top set with weight {squat_top_set_weight_kgs} kg")
+    logger.debug(f"Looking for Bench top set with weight {bench_top_set_weight_kgs} kg")
+    logger.debug(f"Looking for Deadlift top set with weight {deadlift_top_set_weight_kgs} kg")
+    logger.debug(f"Looking for OHP top set with weight {ohp_top_set_weight_kgs} kg")
+
+    squat_top_set = None
+    bench_top_set = None
+    deadlift_top_set = None
+    ohp_top_set = None
+    for workout in workouts:
+        for exercise in workout["exercises"]:
+            if not squat_top_set:
+                squat_top_set = _get_exercise_top_set_reps(exercise, squat_exercise_id, squat_top_set_weight_kgs)
+            if not bench_top_set:
+                bench_top_set = _get_exercise_top_set_reps(exercise, bench_exercise_id, bench_top_set_weight_kgs)
+            if not deadlift_top_set:
+                deadlift_top_set = _get_exercise_top_set_reps(
+                    exercise, deadlift_exercise_id, deadlift_top_set_weight_kgs
+                )
+            if not ohp_top_set:
+                ohp_top_set = _get_exercise_top_set_reps(exercise, ohp_exercise_id, ohp_top_set_weight_kgs)
+
+            if squat_top_set and bench_top_set and deadlift_top_set and ohp_top_set:
+                break
+
+    logger.debug(f"Squats: {squat_top_set}")
+    logger.debug(f"Bench: {bench_top_set}")
+    logger.debug(f"Deadlift: {deadlift_top_set}")
+    logger.debug(f"OHP: {ohp_top_set}")
 
 
 def main() -> None:
@@ -132,8 +199,10 @@ def main() -> None:
             parser.error("Wave and week are required for program")
         setup_week(api_key, config, args.wave, args.week)
     elif args.command == "maxes":
-        print("Recomputing training maxes")
-        # Walk backwards in training history and find the top set for each lift in the wave. 
+        logger.info("Recomputing training maxes")
+        workouts = h.get_workouts(api_key)
+        find_week3_top_sets(config, args.wave, workouts)
+        # Walk backwards in training history and find the top set for each lift in the wave.
         # This might require some heuristical way of searching.
         # Given the wave we're in, we know the expected reps (10, 8, 5, or 3)
         # With the information above in hand, we can recompute the training maxes for the next wave.
