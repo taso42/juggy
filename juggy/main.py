@@ -1,4 +1,4 @@
-"""Main application module."""
+"""Main application logic and entry point."""
 import argparse
 import os
 from typing import cast
@@ -12,6 +12,11 @@ import juggy.hevy as h
 from juggy import util as u
 
 ROUND_WEIGHT_PRECISION = 5
+ONE_REP_MAX_THRESHOLD = 0.95
+BENCH_INCREMENT = 2.5
+OHP_INCREMENT = 2.5
+SQUAT_INCREMENT = 5
+DEADLIFT_INCREMENT = 5
 
 
 def lifts_to_hevy_sets(lifts: list[tuple[float | int, int] | None]) -> list[h.HevySet]:
@@ -105,16 +110,18 @@ def setup_week(api_key: str, config: c.Config, wave: int, week: int) -> None:
     )
 
 
-def _compute_top_set_weight(multiplier: float, training_max: float) -> float:
+def _compute_top_set_weight_kg(multiplier: float, training_max: float) -> float:
     """Compute the expected weight of the top set based on the multiplier and training max."""
     return u.lbs_to_kgs(a.round_weight(training_max * multiplier, ROUND_WEIGHT_PRECISION))
 
 
 def _weights_equal(weight1: float, weight2: float) -> bool:
+    """Compare two weights, allowing for small floating point differences."""
     return abs(weight1 - weight2) < 0.01
 
 
 def _get_exercise_top_set_reps(exercise: h.HevyExercise, exercise_id: str, top_set_weight_kgs: float) -> int | None:
+    """Search within an exercise for a top set that matches the expected weight."""
     if exercise["exercise_template_id"] == exercise_id:
         sets = exercise["sets"]
         if _weights_equal(sets[-1]["weight_kg"], top_set_weight_kgs):
@@ -122,22 +129,23 @@ def _get_exercise_top_set_reps(exercise: h.HevyExercise, exercise_id: str, top_s
     return None
 
 
-def find_week3_top_sets(config: c.Config, wave: int, workouts: list[h.HevyWorkout]) -> None:
+def find_week3_top_sets_reps(config: c.Config, multiplier: float, workouts: list[h.HevyWorkout]) -> dict[str, int]:
     """Finds the top set for each main lift in wave 3 by searching backwards in training history.
     The way we find that is to search for a top set that matches algo.TEMPLATE[wave][3][last_element]. This is
     obviously not foolproof because if the user has changed the protocol, we won't find it.
+
+    returns:
+        A dictionary with keys "squat", "bench", "deadlift", "ohp" and values are the reps of the top set
     """
     squat_exercise_id = config["squat_exercise_id"]
     bench_exercise_id = config["bench_exercise_id"]
     deadlift_exercise_id = config["deadlift_exercise_id"]
     ohp_exercise_id = config["ohp_exercise_id"]
 
-    multiplier = a.TEMPLATE[wave - 1][2][-1][0]
-
-    squat_top_set_weight_kgs = _compute_top_set_weight(multiplier, config["squat_tm"])
-    bench_top_set_weight_kgs = _compute_top_set_weight(multiplier, config["bench_tm"])
-    deadlift_top_set_weight_kgs = _compute_top_set_weight(multiplier, config["deadlift_tm"])
-    ohp_top_set_weight_kgs = _compute_top_set_weight(multiplier, config["ohp_tm"])
+    squat_top_set_weight_kgs = _compute_top_set_weight_kg(multiplier, config["squat_tm"])
+    bench_top_set_weight_kgs = _compute_top_set_weight_kg(multiplier, config["bench_tm"])
+    deadlift_top_set_weight_kgs = _compute_top_set_weight_kg(multiplier, config["deadlift_tm"])
+    ohp_top_set_weight_kgs = _compute_top_set_weight_kg(multiplier, config["ohp_tm"])
 
     logger.debug(f"Looking for Squat top set with weight {squat_top_set_weight_kgs} kg")
     logger.debug(f"Looking for Bench top set with weight {bench_top_set_weight_kgs} kg")
@@ -168,6 +176,10 @@ def find_week3_top_sets(config: c.Config, wave: int, workouts: list[h.HevyWorkou
     logger.debug(f"Bench: {bench_top_set}")
     logger.debug(f"Deadlift: {deadlift_top_set}")
     logger.debug(f"OHP: {ohp_top_set}")
+    if not squat_top_set or not bench_top_set or not deadlift_top_set or not ohp_top_set:
+        raise RuntimeError("One or more top sets not found.")
+
+    return {"squat": squat_top_set, "bench": bench_top_set, "deadlift": deadlift_top_set, "ohp": ohp_top_set}
 
 
 def main() -> None:
@@ -201,12 +213,58 @@ def main() -> None:
     elif args.command == "maxes":
         logger.info("Recomputing training maxes")
         workouts = h.get_workouts(api_key)
-        find_week3_top_sets(config, args.wave, workouts)
-        # Walk backwards in training history and find the top set for each lift in the wave.
-        # This might require some heuristical way of searching.
-        # Given the wave we're in, we know the expected reps (10, 8, 5, or 3)
-        # With the information above in hand, we can recompute the training maxes for the next wave.
-        # Print a summary and ask the user to confirm before saving.
+        multiplier = a.TEMPLATE[args.wave - 1][2][-1][0]
+        top_set_reps = find_week3_top_sets_reps(config, multiplier, workouts)
+
+        old_squat_tm = config["squat_tm"]
+        squat_top_set_weight = a.round_weight(old_squat_tm * multiplier, ROUND_WEIGHT_PRECISION)
+
+        old_bench_tm = config["bench_tm"]
+        bench_top_set_weight = a.round_weight(old_bench_tm * multiplier, ROUND_WEIGHT_PRECISION)
+
+        old_deadlift_tm = config["deadlift_tm"]
+        deadlift_top_set_weight = a.round_weight(old_deadlift_tm * multiplier, ROUND_WEIGHT_PRECISION)
+
+        old_ohp_tm = config["ohp_tm"]
+        ohp_top_set_weight = a.round_weight(old_ohp_tm * multiplier, ROUND_WEIGHT_PRECISION)
+
+        expected_reps = [10, 8, 5, 3][args.wave - 1]
+        new_squat_tm = a.compute_new_training_max(
+            old_squat_tm,
+            squat_top_set_weight,
+            expected_reps,
+            top_set_reps["squat"],
+            SQUAT_INCREMENT,
+            ONE_REP_MAX_THRESHOLD,
+        )
+        new_bench_tm = a.compute_new_training_max(
+            old_bench_tm,
+            bench_top_set_weight,
+            expected_reps,
+            top_set_reps["bench"],
+            BENCH_INCREMENT,
+            ONE_REP_MAX_THRESHOLD,
+        )
+        new_deadlift_tm = a.compute_new_training_max(
+            old_deadlift_tm,
+            deadlift_top_set_weight,
+            expected_reps,
+            top_set_reps["deadlift"],
+            DEADLIFT_INCREMENT,
+            ONE_REP_MAX_THRESHOLD,
+        )
+        new_ohp_tm = a.compute_new_training_max(
+            old_ohp_tm, ohp_top_set_weight, expected_reps, top_set_reps["ohp"], OHP_INCREMENT, ONE_REP_MAX_THRESHOLD
+        )
+
+        print(f"Squats: {old_squat_tm} -> {new_squat_tm}")
+        print(f"Bench: {old_bench_tm} -> {new_bench_tm}")
+        print(f"Deadlift: {old_deadlift_tm} -> {new_deadlift_tm}")
+        print(f"OHP: {old_ohp_tm} -> {new_ohp_tm}")
+
+        config["squat_tm"] = new_squat_tm
+        config["bench_tm"] = new_bench_tm
+        config["deadlift_tm"] = new_deadlift_tm
 
 
 if __name__ == "__main__":

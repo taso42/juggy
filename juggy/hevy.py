@@ -108,7 +108,7 @@ def get_workouts(api_key: str) -> list[HevyWorkout]:
             break
         page += 1
 
-    return cast(list[HevyWorkout], all_workouts )
+    return cast(list[HevyWorkout], all_workouts)
 
 
 def create_folder(api_key: str, title: str) -> HevyRoutineFolder:
